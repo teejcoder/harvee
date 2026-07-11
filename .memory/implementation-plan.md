@@ -77,15 +77,16 @@ Load-bearing context: [[overview]], [[state-transitions]], [[tech-stack]], [[dom
 **Goal:** Migration `002_clients_projects_tasks.sql` with ULID PKs, `name`, `archived_at` nullable, timestamps; `projects.hourly_rate` INTEGER (minor units); FKs `projects.client_id`, `tasks.project_id`.
 **Validation (AI-FB):** Introspection JSON matches the column list in [[domain-model]] §10.
 
-### Step 1.4 — Schema: time_entries + time_entry_segments
+### Step 1.4 — Schema: invoices + invoice_line_items
 
-**Goal:** Migration `003_time_entries.sql` for `time_entries` (`task_id`, `notes`, `state`, `invoice_id` nullable, `edit_form_snapshot` nullable JSON) and `time_entry_segments` (`entry_id`, `started_at`, `stopped_at` nullable). Constraints: `stopped_at IS NULL OR stopped_at >= started_at`; at most one segment per entry with `stopped_at IS NULL`.
-**Validation (AI-FB):** Introspection confirms columns, FKs, and that the check constraints exist.
-
-### Step 1.5 — Schema: invoices + invoice_line_items
-
-**Goal:** Migration `004_invoices.sql`. Invoices carry `state`, `start_date`, `end_date`, `invoice_number` nullable UNIQUE, `payment_terms_days`, snapshotted `currency_code` / `currency_decimals` / `invoice_locale`, `subtotal`, `discount_total`, `total`, `finalized_at` nullable, `voided_at` nullable. Line items carry `kind` (`task`|`discount`), nullable `task_id`, `description`, nullable `hours`, nullable `rate`, `amount`, `sort_order`.
+**Goal:** Migration `003_invoices.sql`. Invoices carry `state`, `client_id`, `start_date`, `end_date`, `invoice_number` nullable UNIQUE, `payment_terms_days`, snapshotted `currency_code` / `currency_decimals` / `invoice_locale`, `subtotal`, `discount_total`, `total`, `finalized_at` nullable, `voided_at` nullable. Line items carry `kind` (`task`|`discount`), nullable `task_id`, `description`, nullable `hours`, nullable `rate`, `amount`, `sort_order`.
 **Validation (AI-FB):** Introspection confirms columns and the `UNIQUE (invoice_number)` index.
+**Ordering note:** invoices lands before time_entries because `time_entries.invoice_id` FK-references `invoices.id`. SQLite with `foreign_keys = ON` rejects INSERTs into a table that FK-references a not-yet-created table, even for NULL FK values. Original plan had these steps swapped; swap discovered during Step 1.4 implementation.
+
+### Step 1.5 — Schema: time_entries + time_entry_segments
+
+**Goal:** Migration `004_time_entries.sql` for `time_entries` (`task_id`, `notes`, `state`, `invoice_id` nullable FK → invoices.id, `edit_form_snapshot` nullable JSON) and `time_entry_segments` (`entry_id`, `started_at`, `stopped_at` nullable). Constraints: `stopped_at IS NULL OR stopped_at >= started_at`; at most one segment per entry with `stopped_at IS NULL`.
+**Validation (AI-FB):** Introspection confirms columns, FKs (including `invoice_id → invoices.id` now that `invoices` exists), and that the check constraints exist.
 
 ### Step 1.6 — Query modules
 

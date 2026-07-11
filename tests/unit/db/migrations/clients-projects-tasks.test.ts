@@ -179,16 +179,14 @@ describe('002_clients_projects_tasks.sql', () => {
 		db.close();
 	});
 
-	test('second boot logs skip for both migrations and applies zero writes', () => {
+	test('second boot records 002_clients_projects_tasks.sql exactly once', () => {
 		const db1 = openDb(dbPath, 'db/migrations');
 		db1.close();
 
 		const applied = openDb(dbPath, 'db/migrations')
-			.prepare('SELECT filename FROM _migrations ORDER BY filename')
+			.prepare('SELECT filename FROM _migrations')
 			.all() as { filename: string }[];
-		expect(applied.map((r) => r.filename)).toEqual([
-			'001_settings.sql',
-			'002_clients_projects_tasks.sql'
-		]);
+		const cptRuns = applied.filter((r) => r.filename === '002_clients_projects_tasks.sql');
+		expect(cptRuns).toHaveLength(1);
 	});
 });
