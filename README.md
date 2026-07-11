@@ -8,17 +8,17 @@ For the full product description, see [`.memory/overview.md`](.memory/overview.m
 
 ## Map
 
-| You want... | Go to |
-|---|---|
-| Product description — what this is and isn't | [`.memory/overview.md`](.memory/overview.md) |
-| State machines, transition logging schema, Mermaid diagram | [`.memory/state-transitions.md`](.memory/state-transitions.md) |
-| Business rules — rates, currency, invoice #, terms, line items | [`.memory/domain-model.md`](.memory/domain-model.md) |
-| Cross-cutting rules — IDs, casing, correlation IDs, SQL, tests | [`.memory/conventions.md`](.memory/conventions.md) |
-| Tech stack decisions, pinned versions, and repo layout | [`.memory/tech-stack.md`](.memory/tech-stack.md) |
-| Build order and validation gates | [`.memory/implementation-plan.md`](.memory/implementation-plan.md) |
-| Internal documentation site (architecture, guides, ADRs) | [`docs/`](docs/) |
-| Changelog | [`docs/changelog.md`](docs/changelog.md) |
-| Rules for AI assistants working in this repo | [`CLAUDE.md`](CLAUDE.md) |
+| You want...                                                    | Go to                                                              |
+| -------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Product description — what this is and isn't                   | [`.memory/overview.md`](.memory/overview.md)                       |
+| State machines, transition logging schema, Mermaid diagram     | [`.memory/state-transitions.md`](.memory/state-transitions.md)     |
+| Business rules — rates, currency, invoice #, terms, line items | [`.memory/domain-model.md`](.memory/domain-model.md)               |
+| Cross-cutting rules — IDs, casing, correlation IDs, SQL, tests | [`.memory/conventions.md`](.memory/conventions.md)                 |
+| Tech stack decisions, pinned versions, and repo layout         | [`.memory/tech-stack.md`](.memory/tech-stack.md)                   |
+| Build order and validation gates                               | [`.memory/implementation-plan.md`](.memory/implementation-plan.md) |
+| Internal documentation site (architecture, guides, ADRs)       | [`docs/`](docs/)                                                   |
+| Changelog                                                      | [`docs/changelog.md`](docs/changelog.md)                           |
+| Rules for AI assistants working in this repo                   | [`CLAUDE.md`](CLAUDE.md)                                           |
 
 ---
 

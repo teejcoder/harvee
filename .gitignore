@@ -21,3 +21,17 @@ Thumbs.db
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# App runtime state
+/data.sqlite
+/logs
+/invoices
+
+# Local Claude Code state
+.claude/settings.local.json
+
+# Playwright
+/test-results
+/playwright-report
+/blob-report
+/playwright/.cache

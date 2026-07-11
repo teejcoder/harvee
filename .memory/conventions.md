@@ -16,15 +16,15 @@ Read alongside [[tech-stack]] (versions), [[state-transitions]] (transition log 
 
 ## 2. Case conventions
 
-| Surface | Case |
-|---|---|
-| SQL table + column names | `snake_case` |
-| TypeScript identifiers | `camelCase` |
-| TypeScript types + Svelte components | `PascalCase` |
-| Log JSON keys (both general logs and transition log) | **`camelCase`** |
-| State names and rejection reasons in logs | `snake_case` (e.g. `entry.running`, `concurrent_timer_forbidden`) — these are enum values, not identifiers |
-| Route paths | `kebab-case` |
-| Filenames | `kebab-case.ts` for lib modules; `camelCase.ts` allowed for Svelte-store-like modules; `+page.svelte` / `+server.ts` follow SvelteKit conventions |
+| Surface                                              | Case                                                                                                                                              |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| SQL table + column names                             | `snake_case`                                                                                                                                      |
+| TypeScript identifiers                               | `camelCase`                                                                                                                                       |
+| TypeScript types + Svelte components                 | `PascalCase`                                                                                                                                      |
+| Log JSON keys (both general logs and transition log) | **`camelCase`**                                                                                                                                   |
+| State names and rejection reasons in logs            | `snake_case` (e.g. `entry.running`, `concurrent_timer_forbidden`) — these are enum values, not identifiers                                        |
+| Route paths                                          | `kebab-case`                                                                                                                                      |
+| Filenames                                            | `kebab-case.ts` for lib modules; `camelCase.ts` allowed for Svelte-store-like modules; `+page.svelte` / `+server.ts` follow SvelteKit conventions |
 
 The row → object translation between SQL and TS happens in `db/queries/*` — each query function converts `snake_case` columns to `camelCase` object fields. No ORM does this automatically.
 

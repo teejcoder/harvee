@@ -1,6 +1,6 @@
 import { defineConfig } from 'vitest/config';
 import tailwindcss from '@tailwindcss/vite';
-import adapter from '@sveltejs/adapter-auto';
+import adapter from '@sveltejs/adapter-vercel';
 import { sveltekit } from '@sveltejs/kit/vite';
 
 export default defineConfig({
@@ -12,10 +12,6 @@ export default defineConfig({
 				runes: ({ filename }) =>
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
-
-			// adapter-auto only supports some environments, see https://svelte.dev/docs/kit/adapter-auto for a list.
-			// If your environment is not supported, or you settled on a specific environment, switch out the adapter.
-			// See https://svelte.dev/docs/kit/adapters for more information about adapters.
 			adapter: adapter()
 		})
 	],
@@ -25,10 +21,18 @@ export default defineConfig({
 			{
 				extends: './vite.config.ts',
 				test: {
-					name: 'server',
+					name: 'unit',
 					environment: 'node',
-					include: ['src/**/*.{test,spec}.{js,ts}'],
-					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}']
+					include: ['tests/unit/**/*.{test,spec}.{js,ts}']
+				}
+			},
+			{
+				extends: './vite.config.ts',
+				test: {
+					name: 'component',
+					environment: 'jsdom',
+					include: ['tests/component/**/*.{test,spec}.{js,ts}'],
+					setupFiles: ['./tests/component/setup.ts']
 				}
 			}
 		]

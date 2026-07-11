@@ -8,7 +8,7 @@ The business rules and data shapes that aren't captured by the state machines in
 
 - All day/week/month boundaries — invoice date ranges, calendar views — are computed in the **system local timezone** (the machine's `Intl.DateTimeFormat().resolvedOptions().timeZone`).
 - All timestamps are **stored as UTC ISO 8601** in the database.
-- The system-local timezone is used only for *display* and *day-boundary math*, never for storage.
+- The system-local timezone is used only for _display_ and _day-boundary math_, never for storage.
 - If the user changes the machine timezone, past data is unaffected; boundaries are recomputed on read.
 
 ---
@@ -35,17 +35,17 @@ The business rules and data shapes that aren't captured by the state machines in
 
 Single row in a `settings` table (enforced with `CHECK (id = 1)`). Fields:
 
-| Field | Type | Notes |
-|---|---|---|
-| `sender_name` | text | e.g. "Teej Contract Dev" |
-| `sender_address` | text (multiline) | Postal address |
-| `sender_email` | text | |
-| `sender_phone` | text (nullable) | |
-| `payment_instructions` | text (multiline) | Bank/wire/other; rendered on the PDF |
-| `currency_code` | text | ISO 4217, e.g. `"USD"` |
-| `currency_decimals` | integer | e.g. `2` |
-| `default_payment_terms_days` | integer | e.g. `30` for Net 30 |
-| `invoice_locale` | text | e.g. `"en-US"`; used for currency and date formatting on PDFs |
+| Field                        | Type             | Notes                                                         |
+| ---------------------------- | ---------------- | ------------------------------------------------------------- |
+| `sender_name`                | text             | e.g. "Teej Contract Dev"                                      |
+| `sender_address`             | text (multiline) | Postal address                                                |
+| `sender_email`               | text             |                                                               |
+| `sender_phone`               | text (nullable)  |                                                               |
+| `payment_instructions`       | text (multiline) | Bank/wire/other; rendered on the PDF                          |
+| `currency_code`              | text             | ISO 4217, e.g. `"USD"`                                        |
+| `currency_decimals`          | integer          | e.g. `2`                                                      |
+| `default_payment_terms_days` | integer          | e.g. `30` for Net 30                                          |
+| `invoice_locale`             | text             | e.g. `"en-US"`; used for currency and date formatting on PDFs |
 
 Editable via a `/settings` page in the UI. There is exactly one row and it always exists (seeded by the initial migration with placeholder values the user overwrites on first use).
 
@@ -87,6 +87,7 @@ Editable via a `/settings` page in the UI. There is exactly one row and it alway
 An invoice has two kinds of line items:
 
 ### 8.1 Task lines (auto-generated)
+
 - Created when a draft is generated.
 - One per distinct task in scope.
 - Fields: `task_id`, `description` (defaults to `"<Project name> — <Task name>"`, editable), `hours` (decimal), `rate` (integer minor units), `amount` = `round(hours * rate)`.
@@ -94,6 +95,7 @@ An invoice has two kinds of line items:
 - **Must be positive**: `hours > 0` and `amount > 0`. A draft cannot be finalized if any task line is non-positive.
 
 ### 8.2 Discount line (manual, optional)
+
 - At most **one** discount line per invoice.
 - Fields: `description` (user-supplied, e.g. `"Early-payment discount"`), `amount` (integer minor units, **must be negative**).
 - No `task_id`, no `hours`, no `rate`.
@@ -101,6 +103,7 @@ An invoice has two kinds of line items:
 - Attempting to finalize with more than one discount line, or a discount line whose amount is `>= 0`, is rejected (`invalid_discount_line` — see [[state-transitions]]).
 
 ### 8.3 Total
+
 - `invoice.subtotal` = sum of task line amounts.
 - `invoice.discount_total` = discount line amount (0 if no discount line).
 - `invoice.total` = `subtotal + discount_total`.
@@ -117,15 +120,15 @@ An invoice has two kinds of line items:
 
 ## 10. Data model summary (tables)
 
-| Table | Key columns |
-|---|---|
-| `settings` | id (always 1), sender fields, currency_code, currency_decimals, default_payment_terms_days, invoice_locale |
-| `clients` | id (ULID), name, archived_at (nullable), timestamps |
-| `projects` | id, client_id, name, hourly_rate (int minor units), archived_at, timestamps |
-| `tasks` | id, project_id, name, archived_at, timestamps |
-| `time_entries` | id, task_id, notes, state (`entry.*`), invoice_id (nullable), edit_form_snapshot (nullable JSON for `entry.editing`), timestamps |
-| `time_entry_segments` | id, entry_id, started_at, stopped_at (nullable while running) |
-| `invoices` | id, client_id, state (`invoice.*`), start_date, end_date, invoice_number (nullable until finalize), payment_terms_days, currency_code, currency_decimals, invoice_locale, subtotal, discount_total, total, finalized_at (nullable), voided_at (nullable), timestamps |
-| `invoice_line_items` | id, invoice_id, kind (`task` \| `discount`), task_id (nullable), description, hours (nullable for discount), rate (nullable for discount), amount, sort_order |
+| Table                 | Key columns                                                                                                                                                                                                                                                          |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `settings`            | id (always 1), sender fields, currency_code, currency_decimals, default_payment_terms_days, invoice_locale                                                                                                                                                           |
+| `clients`             | id (ULID), name, archived_at (nullable), timestamps                                                                                                                                                                                                                  |
+| `projects`            | id, client_id, name, hourly_rate (int minor units), archived_at, timestamps                                                                                                                                                                                          |
+| `tasks`               | id, project_id, name, archived_at, timestamps                                                                                                                                                                                                                        |
+| `time_entries`        | id, task_id, notes, state (`entry.*`), invoice_id (nullable), edit_form_snapshot (nullable JSON for `entry.editing`), timestamps                                                                                                                                     |
+| `time_entry_segments` | id, entry_id, started_at, stopped_at (nullable while running)                                                                                                                                                                                                        |
+| `invoices`            | id, client_id, state (`invoice.*`), start_date, end_date, invoice_number (nullable until finalize), payment_terms_days, currency_code, currency_decimals, invoice_locale, subtotal, discount_total, total, finalized_at (nullable), voided_at (nullable), timestamps |
+| `invoice_line_items`  | id, invoice_id, kind (`task` \| `discount`), task_id (nullable), description, hours (nullable for discount), rate (nullable for discount), amount, sort_order                                                                                                        |
 
 Column names in SQL are snake_case; TypeScript representations are camelCase (see [[conventions]]).
