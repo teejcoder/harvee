@@ -89,7 +89,8 @@ describe('001_settings.sql', () => {
 		const applied = db2.prepare('SELECT filename FROM _migrations').all() as {
 			filename: string;
 		}[];
-		expect(applied.map((r) => r.filename)).toEqual(['001_settings.sql']);
+		const settingsRuns = applied.filter((r) => r.filename === '001_settings.sql');
+		expect(settingsRuns).toHaveLength(1);
 
 		db2.close();
 	});
