@@ -12,6 +12,9 @@
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"lint": "prettier --check . && eslint .",
 		"format": "prettier --write .",
+		"docs:dev": "vitepress dev docs --port 5174",
+		"docs:build": "vitepress build docs",
+		"docs:preview": "vitepress preview docs --port 5174",
 		"test:unit": "vitest --project unit",
 		"test:component": "vitest --project component",
 		"test:e2e": "playwright test",
@@ -32,6 +35,7 @@
 		"eslint-plugin-svelte": "^3.19.0",
 		"globals": "^17.6.0",
 		"jsdom": "^29.1.1",
+		"mermaid": "^11.16.0",
 		"prettier": "^3.8.3",
 		"prettier-plugin-svelte": "^4.1.0",
 		"prettier-plugin-tailwindcss": "^0.8.0",
@@ -41,6 +45,8 @@
 		"typescript": "^6.0.3",
 		"typescript-eslint": "^8.60.1",
 		"vite": "^8.0.16",
+		"vitepress": "^1.6.4",
+		"vitepress-plugin-mermaid": "^2.0.17",
 		"vitest": "^4.1.8"
 	}
 }

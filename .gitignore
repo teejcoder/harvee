@@ -35,3 +35,7 @@ vite.config.ts.timestamp-*
 /playwright-report
 /blob-report
 /playwright/.cache
+
+# VitePress
+docs/.vitepress/dist
+docs/.vitepress/cache

@@ -134,7 +134,7 @@ VitePress lives in `docs/`. Internal documentation only; not a public marketing 
 docs/
 ├── .vitepress/
 │   └── config.ts               # nav, sidebar, mermaid plugin
-├── index.md                    # landing (mirrors overview)
+├── index.md                    # landing (VitePress `layout: home` — hero + links to the four sections)
 ├── architecture/
 │   ├── overview.md
 │   ├── state-machines.md       # renders Mermaid from [[state-transitions]]
