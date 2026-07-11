@@ -12,9 +12,13 @@ export interface Client {
 	updatedAt: string;
 }
 
-export function createClient(db: Database, args: { name: string }, correlationId: string): Client {
+export function createClient(
+	db: Database,
+	args: { id?: string; name: string },
+	correlationId: string
+): Client {
 	requireCorrelationId(correlationId, 'createClient');
-	const id = ulid();
+	const id = args.id ?? ulid();
 	const now = nowUtcIso();
 	prep(db, `INSERT INTO clients (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)`).run(
 		id,

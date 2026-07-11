@@ -20,24 +20,28 @@ For rate, currency, invoice-number, and line-item rules, see [[domain-model]].
 - `task.draft` — task being created under a project
 - `task.active` — task saved, timers can attach
 - `task.archived` — task hidden (terminal for active use)
+- `client.deleted` / `project.deleted` / `task.deleted` — **pseudo-terminal states.** Only ever appear in transition-log lines (as the `newState` on `delete*` transitions, accepted or rejected). No persisted state — a successful delete removes the row entirely. Included so hard-delete attempts show up in the transition log with a canonical `newState` value.
 
 ### Transitions
 
-| From               | To                 | Trigger                                               | Actor |
-| ------------------ | ------------------ | ----------------------------------------------------- | ----- |
-| `—`                | `client.draft`     | User opens "new client" form                          | user  |
-| `client.draft`     | `client.active`    | User saves valid client                               | user  |
-| `client.draft`     | `—` (discarded)    | User cancels                                          | user  |
-| `client.active`    | `client.archived`  | User archives (only if no active children)            | user  |
-| `client.archived`  | `client.active`    | User unarchives                                       | user  |
-| `—`                | `project.draft`    | User opens "new project" under a client               | user  |
-| `project.draft`    | `project.active`   | User saves valid project                              | user  |
-| `project.active`   | `project.archived` | User archives (only if no active children)            | user  |
-| `project.archived` | `project.active`   | User unarchives                                       | user  |
-| `—`                | `task.draft`       | User opens "new task" under a project                 | user  |
-| `task.draft`       | `task.active`      | User saves valid task                                 | user  |
-| `task.active`      | `task.archived`    | User archives (only if no running timer on this task) | user  |
-| `task.archived`    | `task.active`      | User unarchives                                       | user  |
+| From                                   | To                 | Trigger                                                        | Actor |
+| -------------------------------------- | ------------------ | -------------------------------------------------------------- | ----- |
+| `—`                                    | `client.draft`     | User opens "new client" form                                   | user  |
+| `client.draft`                         | `client.active`    | User saves valid client                                        | user  |
+| `client.draft`                         | `—` (discarded)    | User cancels                                                   | user  |
+| `client.active`                        | `client.archived`  | User archives (only if no active children)                     | user  |
+| `client.archived`                      | `client.active`    | User unarchives                                                | user  |
+| `—`                                    | `project.draft`    | User opens "new project" under a client                        | user  |
+| `project.draft`                        | `project.active`   | User saves valid project                                       | user  |
+| `project.active`                       | `project.archived` | User archives (only if no active children)                     | user  |
+| `project.archived`                     | `project.active`   | User unarchives                                                | user  |
+| `—`                                    | `task.draft`       | User opens "new task" under a project                          | user  |
+| `task.draft`                           | `task.active`      | User saves valid task                                          | user  |
+| `task.active`                          | `task.archived`    | User archives (only if no running timer on this task)          | user  |
+| `task.archived`                        | `task.active`      | User unarchives                                                | user  |
+| `client.active` or `client.archived`   | `client.deleted`   | User hard-deletes (only if no non-draft invoice references it) | user  |
+| `project.active` or `project.archived` | `project.deleted`  | User hard-deletes (only if no non-draft invoice references it) | user  |
+| `task.active` or `task.archived`       | `task.deleted`     | User hard-deletes (only if no non-draft invoice references it) | user  |
 
 ### Cascade rule (explicit — no auto-cascade)
 

@@ -16,11 +16,11 @@ export interface Project {
 
 export function createProject(
 	db: Database,
-	args: { clientId: string; name: string; hourlyRate: number },
+	args: { id?: string; clientId: string; name: string; hourlyRate: number },
 	correlationId: string
 ): Project {
 	requireCorrelationId(correlationId, 'createProject');
-	const id = ulid();
+	const id = args.id ?? ulid();
 	const now = nowUtcIso();
 	prep(
 		db,

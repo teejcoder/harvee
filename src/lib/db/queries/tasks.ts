@@ -15,11 +15,11 @@ export interface Task {
 
 export function createTask(
 	db: Database,
-	args: { projectId: string; name: string },
+	args: { id?: string; projectId: string; name: string },
 	correlationId: string
 ): Task {
 	requireCorrelationId(correlationId, 'createTask');
-	const id = ulid();
+	const id = args.id ?? ulid();
 	const now = nowUtcIso();
 	prep(
 		db,
