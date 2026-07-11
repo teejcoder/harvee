@@ -48,9 +48,9 @@ Load-bearing context: [[overview]], [[state-transitions]], [[tech-stack]], [[dom
 **Validation (AI-FB):** Test invokes each level plus one accepted and one rejected transition; AI reads the resulting file and confirms:
 
 - every line parses as JSON,
-- every line has `timestamp`, `level`, `event`,
-- transition lines additionally have `previousState`/`newState`/`accepted`,
-- rejected transitions have `rejectionReason` populated with a canonical code.
+- general log lines have `timestamp`, `level`, `event`,
+- transition lines have `timestamp`, `previousState`, `newState`, `accepted`, `trigger`, `actor` (transition lines omit `level` and `event`; `trigger` is the equivalent field per [[state-transitions]] §Structured Transition Log),
+- rejected transitions have `rejectionReason` populated with a canonical code from the exported `REJECTION_REASONS` list.
 
 ### Step 0.7 — Correlation ID hook (`src/hooks.server.ts`)
 

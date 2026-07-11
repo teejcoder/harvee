@@ -107,9 +107,10 @@ try {
 
 ### 4.4 What every log line must contain
 
-- `event` — namespaced verb (`entry.start`, `invoice.finalize`, `db.query`)
-- `correlationId` — always
+- `timestamp` — ISO 8601 UTC with ms precision, added by the logger
 - `level` — set by the logger method used (`log.debug` / `log.info` / etc.)
+- `event` — namespaced verb (`entry.start`, `invoice.finalize`, `db.query`)
+- `correlationId` — required on every log line emitted from a state-changing call chain. Optional on read paths (GET requests) per `.memory/conventions.md` §5.
 - Entity fields (`entityType`, `entityId`) when the event concerns a specific entity
 - Never: raw user input without redaction, full stack traces at DEBUG/INFO (ERROR only), or interpolated message strings as the primary payload
 
