@@ -5,8 +5,13 @@
 // .memory/conventions.md §5.
 
 import type { Handle } from '@sveltejs/kit';
+import { getDb } from '$lib/db';
 import { ulid } from '$lib/ids';
 import { log } from '$lib/log';
+
+// Warm the DB singleton at server boot so migrations run before the first
+// request is handled. See src/lib/db/index.ts.
+getDb();
 
 const READ_METHODS = new Set(['GET', 'HEAD']);
 
