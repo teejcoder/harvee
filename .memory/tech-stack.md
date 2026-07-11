@@ -22,6 +22,7 @@ Primary language: **TypeScript** → docs site is **VitePress**.
 | TypeScript                 | latest 6.x, `strict: true`                                          | Language                                                   |
 | Tailwind CSS               | **v4** (CSS-first config in `src/app.css`, no `tailwind.config.js`) | Styling                                                    |
 | better-sqlite3             | latest                                                              | SQLite driver                                              |
+| ulid                       | latest                                                              | ULID mint (Crockford base32, monotonic within same ms)     |
 | pdf-lib                    | latest                                                              | PDF construction                                           |
 | Vitest                     | latest (unit + component workspaces)                                | Unit + Svelte component tests                              |
 | Playwright                 | latest                                                              | End-to-end tests                                           |

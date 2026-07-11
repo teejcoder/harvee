@@ -60,7 +60,10 @@ Full ruleset lives in `CLAUDE.md` §4. This section is the machine-readable summ
 
 - Single logger module: `src/lib/log.ts`.
 - Levels: `debug`, `info`, `warn`, `error`.
-- Every function has at least a `debug` entry log with its inputs (redacted where sensitive).
+- Every function has at least a `debug` entry log with its inputs (redacted where sensitive) — **with the pure-utility exemption below.**
+
+**Pure-utility exemption.** Modules that satisfy all three of (a) no I/O, (b) no side effects, and (c) no branch decision worth tracing are exempt from the "every function logs" rule. Currently exempt: `src/lib/ids.ts` (ULID mint), `src/lib/time.ts` (timezone math), `src/lib/money.ts` (amount computation). Callers of these utilities log around the call site with the utility's return value — that's where the interesting context lives. If a new module qualifies, add it to this list; if a listed module grows I/O or branching, remove it from the list and add logging.
+
 - State-changing operations log at `info` with `before` and `after` objects.
 - Error paths log at `error` with `{ error: { message, stack, code? }, ...context }` and re-throw. Never swallow.
 - Log lines are JSON objects appended one-per-line to `logs/transitions.jsonl`. Keys are camelCase. `event` is a required namespaced verb (`entry.start`, `db.query`, `invoice.finalize.failed`).

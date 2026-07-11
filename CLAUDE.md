@@ -74,7 +74,7 @@ Every function participates in the observability contract. This is non-negotiabl
 
 ### 4.2 Rules
 
-1. **Every function logs at DEBUG or above.** A function with no log line is incomplete. At minimum: one entry line naming the function and its inputs (redact secrets).
+1. **Every function logs at DEBUG or above** — with the pure-utility exemption defined in `.memory/conventions.md` §6 (modules with no I/O, no side effects, no branch decisions worth tracing). A non-exempt function with no log line is incomplete. At minimum: one entry line naming the function and its inputs (redact secrets).
 2. **State-changing operations log at INFO with before/after values.** Any function that writes to SQLite, mutates a Svelte store, or transitions an entity must log `{ before, after }` alongside the transition-log emission.
 3. **Error paths log at ERROR with full context.** Include: correlation ID, entity type + ID, the operation attempted, inputs (redacted), and the caught error (`err.message`, `err.stack`, `err.code` if present).
 4. **No swallowed exceptions.** Never write `catch {}` or `catch (e) { /* ignore */ }`. If an error is truly ignorable, log it at WARN with a `reason` field explaining why it's safe to continue. Then continue.
