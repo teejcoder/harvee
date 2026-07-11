@@ -10,8 +10,10 @@ import { ulid } from '$lib/ids';
 import { log } from '$lib/log';
 
 // Warm the DB singleton at server boot so migrations run before the first
-// request is handled. See src/lib/db/index.ts.
-getDb();
+// request is handled. See src/lib/db/index.ts. Skipped under Vitest so tests
+// that import this module don't touch ./data.sqlite — production and dev
+// both leave process.env.VITEST unset.
+if (!process.env.VITEST) getDb();
 
 const READ_METHODS = new Set(['GET', 'HEAD']);
 

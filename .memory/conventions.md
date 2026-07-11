@@ -101,6 +101,7 @@ Full ruleset lives in `CLAUDE.md` §4. This section is the machine-readable summ
 - Test files end in `.test.ts`.
 - Every state machine (`src/lib/state/*`) has a table-driven test covering every transition (accepted and rejected) listed in [[state-transitions]]. The test asserts the resulting transition-log entry matches the schema.
 - The clock is mocked via `vi.setSystemTime()` — no real-time-dependent tests.
+- **Never touch `./data.sqlite` from a test.** Vitest sets `process.env.VITEST`; boot-time side effects (like `hooks.server.ts` calling `getDb()`) must be guarded with `if (!process.env.VITEST)`. Tests that need a database open one with `openDb(tmpPath, tmpMigrationsDir)` into a `mkdtempSync` directory.
 
 ## 12. File and folder hygiene
 
