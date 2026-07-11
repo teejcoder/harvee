@@ -15,7 +15,8 @@ const DEFAULT_LOG_PATH = 'logs/transitions.jsonl';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
-export type EntityType = 'timeEntry' | 'segment' | 'invoice' | 'client' | 'project' | 'task';
+export type EntityType =
+	'timeEntry' | 'segment' | 'invoice' | 'client' | 'project' | 'task' | 'settings';
 
 // Every rejection reason accepted by logTransition. Mirrors the list
 // in .memory/state-transitions.md §Rejection reasons.

@@ -39,7 +39,7 @@ Primary language: **TypeScript** → docs site is **VitePress**.
 - No auth library. Single user, local app.
 - No state management library (Redux/Zustand). Svelte 5 runes cover it.
 - No component library (shadcn, Radix, MUI). Native HTML + Tailwind.
-- No ORM (Prisma, Drizzle). Plain SQL in `db/queries/`.
+- No ORM (Prisma, Drizzle). Plain SQL in `src/lib/db/queries/`.
 - No Puppeteer/Playwright for PDF. `pdf-lib` handles it.
 - No calendar library. Hand-rolled grid.
 - No monorepo tooling. One `package.json`.
@@ -57,7 +57,7 @@ Adding anything from this list requires an ADR in `docs/decisions/`.
 
 - **SQLite** via **better-sqlite3**. One file at `./data.sqlite` (hardcoded path — no env var).
 - **Migrations** are plain `.sql` files in `db/migrations/` named `NNN_description.sql`, applied in ascending filename order **on app startup**. A `_migrations` table tracks applied filenames so re-runs are no-ops. No separate `pnpm db:migrate` command.
-- **No ORM.** Hand-written SQL in `db/queries/`. One file per entity. Each function is typed input → typed output.
+- **No ORM.** Hand-written SQL in `src/lib/db/queries/`. One file per entity. Each function is typed input → typed output.
 
 ## Logging
 
@@ -99,13 +99,15 @@ harvest-clone/
 │   ├── conventions.md
 │   └── implementation-plan.md
 ├── db/
-│   ├── migrations/             # 001_init.sql, 002_...
-│   └── queries/                # clients.ts, projects.ts, tasks.ts, entries.ts, segments.ts, invoices.ts, settings.ts
+│   └── migrations/             # 001_init.sql, 002_...
 ├── src/
 │   ├── lib/
 │   │   ├── log.ts              # structured logger + transition log emitter
 │   │   ├── ids.ts              # ULID generation
 │   │   ├── time.ts             # system-local day/week/month math
+│   │   ├── db/
+│   │   │   ├── index.ts        # openDb / getDb + migration runner
+│   │   │   └── queries/        # clients.ts, projects.ts, tasks.ts, entries.ts, segments.ts, invoices.ts, settings.ts, lineItems.ts, _helpers.ts
 │   │   ├── state/              # entry.ts, invoice.ts, client.ts, project.ts, task.ts
 │   │   └── pdf/                # invoice.ts (pdf-lib renderer)
 │   ├── routes/                 # SvelteKit file-based routes

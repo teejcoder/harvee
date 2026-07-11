@@ -90,7 +90,7 @@ Load-bearing context: [[overview]], [[state-transitions]], [[tech-stack]], [[dom
 
 ### Step 1.6 — Query modules
 
-**Goal:** `db/queries/{settings,clients,projects,tasks,entries,segments,invoices,lineItems}.ts` — typed functions per [[conventions]] §7. Every write signature takes `correlationId: string`; reads omit it.
+**Goal:** `src/lib/db/queries/{settings,clients,projects,tasks,entries,segments,invoices,lineItems}.ts` — typed functions per [[conventions]] §7. Every write signature takes `correlationId: string`; reads omit it.
 **Validation (AI-FB):** Vitest suite inserts and reads one row per entity, converts snake_case → camelCase, all pass. A separate test asserts that calling a write function without a correlation ID logs an `error` line and throws.
 
 ---

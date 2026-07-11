@@ -26,7 +26,7 @@ Read alongside [[tech-stack]] (versions), [[state-transitions]] (transition log 
 | Route paths                                          | `kebab-case`                                                                                                                                      |
 | Filenames                                            | `kebab-case.ts` for lib modules; `camelCase.ts` allowed for Svelte-store-like modules; `+page.svelte` / `+server.ts` follow SvelteKit conventions |
 
-The row → object translation between SQL and TS happens in `db/queries/*` — each query function converts `snake_case` columns to `camelCase` object fields. No ORM does this automatically.
+The row → object translation between SQL and TS happens in `src/lib/db/queries/*` — each query function converts `snake_case` columns to `camelCase` object fields. No ORM does this automatically.
 
 ## 3. Money
 
@@ -73,7 +73,7 @@ Full ruleset lives in `CLAUDE.md` §4. This section is the machine-readable summ
 
 ## 7. SQL
 
-- Plain SQL in `db/queries/*.ts`. Each file exports one function per query.
+- Plain SQL in `src/lib/db/queries/*.ts`. Each file exports one function per query.
 - Every query function signature: `(db: Database, args: {...}, correlationId?: string) => TypedResult`.
 - Correlation ID is `undefined` on read queries and required on write queries (enforce with a runtime check that logs an `error` if a write is attempted without one).
 - Prepared statements are cached at module scope. Do not build SQL strings via concatenation with user input — always parameterize.
