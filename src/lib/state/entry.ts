@@ -530,6 +530,41 @@ export function updateSegment(
 // Discard — draft OR stopped → discarded
 // ------------------------------------------------------------
 
+export function updateNotes(
+	db: Database,
+	args: { entryId: string; notes: string },
+	correlationId: string
+): void {
+	log.debug({ event: 'state.entry.updateNotes.enter', correlationId, entityId: args.entryId });
+	const { state } = currentState(db, args.entryId);
+	if (state === 'entry.locked') {
+		log.warn({
+			event: 'entry.updateNotes.rejected',
+			correlationId,
+			entityType: 'timeEntry',
+			entityId: args.entryId,
+			rejectionReason: 'entry_locked_by_invoice'
+		});
+		throw new StateTransitionError(
+			'entry_locked_by_invoice',
+			`entry ${args.entryId} is locked; notes cannot be edited`
+		);
+	}
+	const now = nowUtcIso();
+	db.prepare(`UPDATE time_entries SET notes = ?, updated_at = ? WHERE id = ?`).run(
+		args.notes,
+		now,
+		args.entryId
+	);
+	log.info({
+		event: 'entry.updateNotes',
+		correlationId,
+		entityType: 'timeEntry',
+		entityId: args.entryId,
+		after: { notes: args.notes }
+	});
+}
+
 export function discardEntry(db: Database, entryId: string, correlationId: string): void {
 	log.debug({ event: 'state.entry.discard.enter', correlationId, entityId: entryId });
 	const { state: before } = currentState(db, entryId);
