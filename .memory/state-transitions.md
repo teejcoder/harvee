@@ -125,6 +125,7 @@ There is **no midnight auto-stop**. A running timer may span multiple days; segm
 - `invoice.finalized` — locked, line items and totals frozen; source entries transition to `entry.locked`
 - `invoice.exported` — a PDF has been rendered and saved from a finalized invoice (non-exclusive; invoice stays finalized)
 - `invoice.voided` — finalized invoice reversed; source entries transition to `entry.discarded` (terminal)
+- `invoice.deleted` — **pseudo-terminal.** Only appears in transition-log lines (as `newState` on `deleteDraft` transitions, accepted or rejected). No persisted state — a successful delete removes the row entirely. Same convention as `client.deleted` / `project.deleted` / `task.deleted` in §1.
 
 ### Scope
 
@@ -141,7 +142,7 @@ An invoice covers **one client + one date range** (inclusive `[startDate, endDat
 | `invoice.exported`  | `invoice.exported`  | User re-exports PDF (overwrites file on disk, re-downloads)                                     | user  |
 | `invoice.finalized` | `invoice.voided`    | User voids invoice                                                                              | user  |
 | `invoice.exported`  | `invoice.voided`    | User voids invoice                                                                              | user  |
-| `invoice.draft`     | `—` (discarded)     | User deletes draft                                                                              | user  |
+| `invoice.draft`     | `invoice.deleted`   | User deletes draft (**pseudo-terminal**, same log-only convention as `client.deleted`)          | user  |
 
 ### Invalid transitions (rejected)
 

@@ -28,6 +28,7 @@ export interface Invoice {
 }
 
 export interface CreateInvoiceDraftArgs {
+	id?: string;
 	clientId: string;
 	startDate: string;
 	endDate: string;
@@ -47,7 +48,7 @@ export function createDraftInvoice(
 	correlationId: string
 ): Invoice {
 	requireCorrelationId(correlationId, 'createDraftInvoice');
-	const id = ulid();
+	const id = args.id ?? ulid();
 	const now = nowUtcIso();
 	prep(
 		db,
