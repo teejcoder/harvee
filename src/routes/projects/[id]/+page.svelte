@@ -13,7 +13,28 @@
 		>
 	</nav>
 
-	<h1 class="mb-1 text-2xl font-semibold">{data.project.name}</h1>
+	<div class="mb-1 flex items-center justify-between">
+		<h1 class="text-2xl font-semibold">{data.project.name}</h1>
+		{#if data.project.archivedAt}
+			<form method="post" action="?/unarchiveProject">
+				<button
+					type="submit"
+					class="rounded border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
+				>
+					Unarchive
+				</button>
+			</form>
+		{:else}
+			<form method="post" action="?/archiveProject">
+				<button
+					type="submit"
+					class="rounded border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
+				>
+					Archive
+				</button>
+			</form>
+		{/if}
+	</div>
 	<p class="mb-4 text-sm text-gray-600">
 		{(data.project.hourlyRate / 100).toFixed(2)}/hr
 		{#if data.project.archivedAt}<span class="ml-2 text-xs text-gray-500">archived</span>{/if}
@@ -21,14 +42,14 @@
 
 	<h2 class="mt-8 mb-3 text-lg font-medium">Tasks</h2>
 
-	{#if form?.success}
+	{#if form && 'success' in form && form.success}
 		<div class="mb-4 rounded border border-green-300 bg-green-50 p-3 text-green-800">
 			Task created.
 		</div>
 	{/if}
-	{#if form?.error}
+	{#if form && 'error' in form && form.error}
 		<div class="mb-4 rounded border border-red-300 bg-red-50 p-3 text-red-800">
-			{form.error}
+			{String(form.error)}
 		</div>
 	{/if}
 
@@ -55,7 +76,25 @@
 				<li class="flex items-center justify-between px-4 py-3">
 					<span class:opacity-50={task.archivedAt !== null}>{task.name}</span>
 					{#if task.archivedAt}
-						<span class="text-xs text-gray-500">archived</span>
+						<form method="post" action="?/unarchiveTask">
+							<input type="hidden" name="taskId" value={task.id} />
+							<button
+								type="submit"
+								class="rounded border border-gray-300 px-2 py-0.5 text-xs hover:bg-gray-50"
+							>
+								Unarchive
+							</button>
+						</form>
+					{:else}
+						<form method="post" action="?/archiveTask">
+							<input type="hidden" name="taskId" value={task.id} />
+							<button
+								type="submit"
+								class="rounded border border-gray-300 px-2 py-0.5 text-xs hover:bg-gray-50"
+							>
+								Archive
+							</button>
+						</form>
 					{/if}
 				</li>
 			{/each}

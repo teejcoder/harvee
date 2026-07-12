@@ -10,21 +10,42 @@
 		<a href={resolve('/clients')} class="text-blue-700 hover:underline">← Clients</a>
 	</nav>
 
-	<h1 class="mb-1 text-2xl font-semibold">{data.client.name}</h1>
+	<div class="mb-1 flex items-center justify-between">
+		<h1 class="text-2xl font-semibold">{data.client.name}</h1>
+		{#if data.client.archivedAt}
+			<form method="post" action="?/unarchiveClient">
+				<button
+					type="submit"
+					class="rounded border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
+				>
+					Unarchive
+				</button>
+			</form>
+		{:else}
+			<form method="post" action="?/archiveClient">
+				<button
+					type="submit"
+					class="rounded border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
+				>
+					Archive
+				</button>
+			</form>
+		{/if}
+	</div>
 	{#if data.client.archivedAt}
 		<p class="mb-4 text-sm text-gray-500">Archived {data.client.archivedAt}</p>
 	{/if}
 
 	<h2 class="mt-8 mb-3 text-lg font-medium">Projects</h2>
 
-	{#if form?.success}
+	{#if form && 'success' in form && form.success}
 		<div class="mb-4 rounded border border-green-300 bg-green-50 p-3 text-green-800">
 			Project created.
 		</div>
 	{/if}
-	{#if form?.error}
+	{#if form && 'error' in form && form.error}
 		<div class="mb-4 rounded border border-red-300 bg-red-50 p-3 text-red-800">
-			{form.error}
+			{String(form.error)}
 		</div>
 	{/if}
 
@@ -71,9 +92,29 @@
 					>
 						{project.name}
 					</a>
-					<span class="text-sm text-gray-600">
-						{(project.hourlyRate / 100).toFixed(2)}/hr
-						{#if project.archivedAt}<span class="ml-2 text-xs">archived</span>{/if}
+					<span class="flex items-center gap-3 text-sm text-gray-600">
+						<span>{(project.hourlyRate / 100).toFixed(2)}/hr</span>
+						{#if project.archivedAt}
+							<form method="post" action="?/unarchiveProject">
+								<input type="hidden" name="projectId" value={project.id} />
+								<button
+									type="submit"
+									class="rounded border border-gray-300 px-2 py-0.5 text-xs hover:bg-gray-50"
+								>
+									Unarchive
+								</button>
+							</form>
+						{:else}
+							<form method="post" action="?/archiveProject">
+								<input type="hidden" name="projectId" value={project.id} />
+								<button
+									type="submit"
+									class="rounded border border-gray-300 px-2 py-0.5 text-xs hover:bg-gray-50"
+								>
+									Archive
+								</button>
+							</form>
+						{/if}
 					</span>
 				</li>
 			{/each}

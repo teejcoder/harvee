@@ -2,9 +2,33 @@ import { error, fail } from '@sveltejs/kit';
 import { getDb } from '$lib/db';
 import { getProject } from '$lib/db/queries/projects';
 import { log } from '$lib/log';
-import { createTask } from '$lib/state/task';
+import { archiveProject, unarchiveProject } from '$lib/state/project';
+import { archiveTask, createTask, unarchiveTask } from '$lib/state/task';
 import { StateTransitionError } from '$lib/state/_error';
 import type { Actions, PageServerLoad } from './$types';
+
+function handleTransition<T>(
+	fn: () => T,
+	correlationId: string,
+	failureEvent: string
+): T | ReturnType<typeof fail> {
+	try {
+		return fn();
+	} catch (err) {
+		if (err instanceof StateTransitionError) {
+			return fail(400, {
+				error: err.message,
+				rejectionReason: err.rejectionReason
+			});
+		}
+		log.error({
+			event: failureEvent,
+			correlationId,
+			error: { message: (err as Error).message, stack: (err as Error).stack }
+		});
+		return fail(500, { error: (err as Error).message });
+	}
+}
 
 interface TaskRow {
 	id: string;
@@ -35,27 +59,74 @@ export const actions: Actions = {
 	create: async ({ request, locals, params }) => {
 		const correlationId = locals.correlationId;
 		if (!correlationId) return fail(500, { error: 'correlationId missing on locals' });
-
 		const form = await request.formData();
 		const name = String(form.get('name') ?? '').trim();
 		if (name.length === 0) return fail(400, { error: 'Name is required' });
+		return handleTransition(
+			() => {
+				const task = createTask(getDb(), { projectId: params.id, name }, correlationId);
+				return { success: true, taskId: task.id };
+			},
+			correlationId,
+			'routes.tasks.create.failed'
+		);
+	},
 
-		try {
-			const task = createTask(getDb(), { projectId: params.id, name }, correlationId);
-			return { success: true, taskId: task.id };
-		} catch (err) {
-			if (err instanceof StateTransitionError) {
-				return fail(400, {
-					error: err.message,
-					rejectionReason: err.rejectionReason
-				});
-			}
-			log.error({
-				event: 'routes.tasks.create.failed',
-				correlationId,
-				error: { message: (err as Error).message, stack: (err as Error).stack }
-			});
-			return fail(500, { error: (err as Error).message });
-		}
+	archiveProject: async ({ locals, params }) => {
+		const correlationId = locals.correlationId;
+		if (!correlationId) return fail(500, { error: 'correlationId missing on locals' });
+		return handleTransition(
+			() => {
+				archiveProject(getDb(), params.id, correlationId);
+				return { success: true };
+			},
+			correlationId,
+			'routes.projects.archive.failed'
+		);
+	},
+
+	unarchiveProject: async ({ locals, params }) => {
+		const correlationId = locals.correlationId;
+		if (!correlationId) return fail(500, { error: 'correlationId missing on locals' });
+		return handleTransition(
+			() => {
+				unarchiveProject(getDb(), params.id, correlationId);
+				return { success: true };
+			},
+			correlationId,
+			'routes.projects.unarchive.failed'
+		);
+	},
+
+	archiveTask: async ({ request, locals }) => {
+		const correlationId = locals.correlationId;
+		if (!correlationId) return fail(500, { error: 'correlationId missing on locals' });
+		const form = await request.formData();
+		const taskId = String(form.get('taskId') ?? '');
+		if (!taskId) return fail(400, { error: 'taskId required' });
+		return handleTransition(
+			() => {
+				archiveTask(getDb(), taskId, correlationId);
+				return { success: true };
+			},
+			correlationId,
+			'routes.tasks.archive.failed'
+		);
+	},
+
+	unarchiveTask: async ({ request, locals }) => {
+		const correlationId = locals.correlationId;
+		if (!correlationId) return fail(500, { error: 'correlationId missing on locals' });
+		const form = await request.formData();
+		const taskId = String(form.get('taskId') ?? '');
+		if (!taskId) return fail(400, { error: 'taskId required' });
+		return handleTransition(
+			() => {
+				unarchiveTask(getDb(), taskId, correlationId);
+				return { success: true };
+			},
+			correlationId,
+			'routes.tasks.unarchive.failed'
+		);
 	}
 };

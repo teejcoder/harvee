@@ -2,9 +2,33 @@ import { error, fail } from '@sveltejs/kit';
 import { getDb } from '$lib/db';
 import { getClient } from '$lib/db/queries/clients';
 import { log } from '$lib/log';
-import { createProject } from '$lib/state/project';
+import { archiveClient, unarchiveClient } from '$lib/state/client';
+import { archiveProject, createProject, unarchiveProject } from '$lib/state/project';
 import { StateTransitionError } from '$lib/state/_error';
 import type { Actions, PageServerLoad } from './$types';
+
+function handleTransition<T>(
+	fn: () => T,
+	correlationId: string,
+	failureEvent: string
+): T | ReturnType<typeof fail> {
+	try {
+		return fn();
+	} catch (err) {
+		if (err instanceof StateTransitionError) {
+			return fail(400, {
+				error: err.message,
+				rejectionReason: err.rejectionReason
+			});
+		}
+		log.error({
+			event: failureEvent,
+			correlationId,
+			error: { message: (err as Error).message, stack: (err as Error).stack }
+		});
+		return fail(500, { error: (err as Error).message });
+	}
+}
 
 interface ProjectRow {
 	id: string;
@@ -47,26 +71,75 @@ export const actions: Actions = {
 		// Rate is entered in whole units (e.g. dollars); store as minor units.
 		const hourlyRate = Math.round(rateInput * 100);
 
-		try {
-			const project = createProject(
-				getDb(),
-				{ clientId: params.id, name, hourlyRate },
-				correlationId
-			);
-			return { success: true, projectId: project.id };
-		} catch (err) {
-			if (err instanceof StateTransitionError) {
-				return fail(400, {
-					error: err.message,
-					rejectionReason: err.rejectionReason
-				});
-			}
-			log.error({
-				event: 'routes.projects.create.failed',
-				correlationId,
-				error: { message: (err as Error).message, stack: (err as Error).stack }
-			});
-			return fail(500, { error: (err as Error).message });
-		}
+		return handleTransition(
+			() => {
+				const project = createProject(
+					getDb(),
+					{ clientId: params.id, name, hourlyRate },
+					correlationId
+				);
+				return { success: true, projectId: project.id };
+			},
+			correlationId,
+			'routes.projects.create.failed'
+		);
+	},
+
+	archiveClient: async ({ locals, params }) => {
+		const correlationId = locals.correlationId;
+		if (!correlationId) return fail(500, { error: 'correlationId missing on locals' });
+		return handleTransition(
+			() => {
+				archiveClient(getDb(), params.id, correlationId);
+				return { success: true };
+			},
+			correlationId,
+			'routes.clients.archive.failed'
+		);
+	},
+
+	unarchiveClient: async ({ locals, params }) => {
+		const correlationId = locals.correlationId;
+		if (!correlationId) return fail(500, { error: 'correlationId missing on locals' });
+		return handleTransition(
+			() => {
+				unarchiveClient(getDb(), params.id, correlationId);
+				return { success: true };
+			},
+			correlationId,
+			'routes.clients.unarchive.failed'
+		);
+	},
+
+	archiveProject: async ({ request, locals }) => {
+		const correlationId = locals.correlationId;
+		if (!correlationId) return fail(500, { error: 'correlationId missing on locals' });
+		const form = await request.formData();
+		const projectId = String(form.get('projectId') ?? '');
+		if (!projectId) return fail(400, { error: 'projectId required' });
+		return handleTransition(
+			() => {
+				archiveProject(getDb(), projectId, correlationId);
+				return { success: true };
+			},
+			correlationId,
+			'routes.projects.archive.failed'
+		);
+	},
+
+	unarchiveProject: async ({ request, locals }) => {
+		const correlationId = locals.correlationId;
+		if (!correlationId) return fail(500, { error: 'correlationId missing on locals' });
+		const form = await request.formData();
+		const projectId = String(form.get('projectId') ?? '');
+		if (!projectId) return fail(400, { error: 'projectId required' });
+		return handleTransition(
+			() => {
+				unarchiveProject(getDb(), projectId, correlationId);
+				return { success: true };
+			},
+			correlationId,
+			'routes.projects.unarchive.failed'
+		);
 	}
 };
