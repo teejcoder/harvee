@@ -3,7 +3,7 @@ import { getDb } from '$lib/db';
 import { getProject } from '$lib/db/queries/projects';
 import { log } from '$lib/log';
 import { archiveProject, unarchiveProject } from '$lib/state/project';
-import { archiveTask, createTask, unarchiveTask } from '$lib/state/task';
+import { archiveTask, createTask, unarchiveTask, updateTask } from '$lib/state/task';
 import { StateTransitionError } from '$lib/state/_error';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -33,6 +33,7 @@ function handleTransition<T>(
 interface TaskRow {
 	id: string;
 	name: string;
+	description: string;
 	archivedAt: string | null;
 }
 
@@ -45,7 +46,7 @@ export const load: PageServerLoad = ({ params }) => {
 
 	const tasks = db
 		.prepare(
-			`SELECT id, name, archived_at AS archivedAt
+			`SELECT id, name, description, archived_at AS archivedAt
 			 FROM tasks
 			 WHERE project_id = ?
 			 ORDER BY archived_at IS NOT NULL, name COLLATE NOCASE`
@@ -61,14 +62,38 @@ export const actions: Actions = {
 		if (!correlationId) return fail(500, { error: 'correlationId missing on locals' });
 		const form = await request.formData();
 		const name = String(form.get('name') ?? '').trim();
+		const description = String(form.get('description') ?? '').trim();
 		if (name.length === 0) return fail(400, { error: 'Name is required' });
 		return handleTransition(
 			() => {
-				const task = createTask(getDb(), { projectId: params.id, name }, correlationId);
+				const task = createTask(
+					getDb(),
+					{ projectId: params.id, name, description },
+					correlationId
+				);
 				return { success: true, taskId: task.id };
 			},
 			correlationId,
 			'routes.tasks.create.failed'
+		);
+	},
+
+	updateTask: async ({ request, locals }) => {
+		const correlationId = locals.correlationId;
+		if (!correlationId) return fail(500, { error: 'correlationId missing on locals' });
+		const form = await request.formData();
+		const taskId = String(form.get('taskId') ?? '');
+		const name = String(form.get('name') ?? '').trim();
+		const description = String(form.get('description') ?? '').trim();
+		if (!taskId) return fail(400, { error: 'taskId required' });
+		if (name.length === 0) return fail(400, { error: 'Name is required' });
+		return handleTransition(
+			() => {
+				updateTask(getDb(), { id: taskId, name, description }, correlationId);
+				return { success: true };
+			},
+			correlationId,
+			'routes.tasks.update.failed'
 		);
 	},
 

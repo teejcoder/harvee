@@ -340,6 +340,90 @@ export function removeDiscountLine(db: Database, invoiceId: string, correlationI
 }
 
 // -----------------------------------------------------------------------------
+// updateTaskLine — edit a draft task line's description/hours/rate, recompute totals
+// -----------------------------------------------------------------------------
+
+export function updateTaskLine(
+	db: Database,
+	args: { invoiceId: string; lineId: string; description: string; hours: number; rate: number },
+	correlationId: string
+): void {
+	log.debug({ event: 'state.invoice.updateTaskLine.enter', correlationId, ...args });
+	const invoice = invoicesQ.getInvoice(db, args.invoiceId);
+	if (!invoice) throw new Error(`invoice ${args.invoiceId} not found`);
+	if (invoice.state !== 'invoice.draft') {
+		logTransition({
+			correlationId,
+			entityType: 'invoice',
+			entityId: args.invoiceId,
+			previousState: invoice.state,
+			newState: invoice.state,
+			trigger: 'user.updateTaskLine',
+			actor: USER_ACTOR,
+			accepted: false,
+			rejectionReason: 'invoice_locked'
+		});
+		throw new StateTransitionError(
+			'invoice_locked',
+			`invoice ${args.invoiceId} is ${invoice.state}; cannot edit`
+		);
+	}
+
+	const line = db
+		.prepare(
+			`SELECT kind, description, hours, rate, amount FROM invoice_line_items WHERE id = ? AND invoice_id = ?`
+		)
+		.get(args.lineId, args.invoiceId) as
+		| {
+				kind: string;
+				description: string;
+				hours: number | null;
+				rate: number | null;
+				amount: number;
+		  }
+		| undefined;
+	if (!line) throw new Error(`line ${args.lineId} not found on invoice ${args.invoiceId}`);
+	if (line.kind !== 'task') throw new Error(`line ${args.lineId} is not a task line`);
+
+	// amount = round(hours * rate). The DB CHECK requires hours > 0 and amount > 0
+	// for task lines (see 003_invoices.sql); the route validates positivity first,
+	// and this write is the backstop — a non-positive value rolls the transaction back.
+	const amount = Math.round(args.hours * args.rate);
+
+	db.transaction(() => {
+		db.prepare(
+			`UPDATE invoice_line_items SET description = ?, hours = ?, rate = ?, amount = ? WHERE id = ?`
+		).run(args.description, args.hours, args.rate, amount, args.lineId);
+		const { subtotal } = db
+			.prepare(
+				`SELECT COALESCE(SUM(amount), 0) AS subtotal FROM invoice_line_items WHERE invoice_id = ? AND kind = 'task'`
+			)
+			.get(args.invoiceId) as { subtotal: number };
+		const newTotal = subtotal + invoice.discountTotal;
+		db.prepare(`UPDATE invoices SET subtotal = ?, total = ?, updated_at = ? WHERE id = ?`).run(
+			subtotal,
+			newTotal,
+			nowUtcIso(),
+			args.invoiceId
+		);
+	})();
+
+	log.info({
+		event: 'invoice.updateTaskLine',
+		correlationId,
+		entityType: 'invoice',
+		entityId: args.invoiceId,
+		before: {
+			description: line.description,
+			hours: line.hours,
+			rate: line.rate,
+			amount: line.amount
+		},
+		after: { description: args.description, hours: args.hours, rate: args.rate, amount }
+	});
+}
+
+// -----------------------------------------------------------------------------
 // finalizeInvoice — draft → finalized, cascades entries to locked
 // -----------------------------------------------------------------------------
 

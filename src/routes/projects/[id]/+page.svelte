@@ -57,8 +57,13 @@
 		<input
 			name="name"
 			placeholder="Task name"
-			class="flex-1 rounded border border-gray-300 px-3 py-2"
+			class="rounded border border-gray-300 px-3 py-2"
 			required
+		/>
+		<input
+			name="description"
+			placeholder="Description (optional)"
+			class="flex-1 rounded border border-gray-300 px-3 py-2"
 		/>
 		<button
 			type="submit"
@@ -73,28 +78,68 @@
 	{:else}
 		<ul class="divide-y divide-gray-200 rounded border border-gray-200">
 			{#each data.tasks as task (task.id)}
-				<li class="flex items-center justify-between px-4 py-3">
-					<span class:opacity-50={task.archivedAt !== null}>{task.name}</span>
+				<li class="px-4 py-3">
 					{#if task.archivedAt}
-						<form method="post" action="?/unarchiveTask">
-							<input type="hidden" name="taskId" value={task.id} />
-							<button
-								type="submit"
-								class="rounded border border-gray-300 px-2 py-0.5 text-xs hover:bg-gray-50"
-							>
-								Unarchive
-							</button>
-						</form>
+						<div class="flex items-center justify-between gap-2 opacity-50">
+							<div>
+								<div>{task.name}</div>
+								{#if task.description}
+									<div class="text-xs text-gray-500">{task.description}</div>
+								{/if}
+							</div>
+							<form method="post" action="?/unarchiveTask">
+								<input type="hidden" name="taskId" value={task.id} />
+								<button
+									type="submit"
+									class="rounded border border-gray-300 px-2 py-0.5 text-xs opacity-100 hover:bg-gray-50"
+								>
+									Unarchive
+								</button>
+							</form>
+						</div>
 					{:else}
-						<form method="post" action="?/archiveTask">
-							<input type="hidden" name="taskId" value={task.id} />
-							<button
-								type="submit"
-								class="rounded border border-gray-300 px-2 py-0.5 text-xs hover:bg-gray-50"
+						<div class="flex flex-wrap items-end gap-2">
+							<form
+								method="post"
+								action="?/updateTask"
+								class="flex flex-1 flex-wrap items-end gap-2"
 							>
-								Archive
-							</button>
-						</form>
+								<input type="hidden" name="taskId" value={task.id} />
+								<label>
+									<span class="block text-xs text-gray-600">Name</span>
+									<input
+										name="name"
+										value={task.name}
+										class="rounded border border-gray-300 px-2 py-1"
+										required
+									/>
+								</label>
+								<label class="flex-1">
+									<span class="block text-xs text-gray-600">Description</span>
+									<input
+										name="description"
+										value={task.description}
+										placeholder="—"
+										class="w-full rounded border border-gray-300 px-2 py-1"
+									/>
+								</label>
+								<button
+									type="submit"
+									class="rounded border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50"
+								>
+									Save
+								</button>
+							</form>
+							<form method="post" action="?/archiveTask">
+								<input type="hidden" name="taskId" value={task.id} />
+								<button
+									type="submit"
+									class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50"
+								>
+									Archive
+								</button>
+							</form>
+						</div>
 					{/if}
 				</li>
 			{/each}

@@ -97,9 +97,11 @@ describe('Step 6.1 — generate draft invoice', () => {
 		expect(redirected!.status).toBe(303);
 		expect(redirected!.location).toMatch(/^\/invoices\/[0-9A-HJKMNP-TV-Z]{26}$/);
 
-		const inv = getDb()
-			.prepare(`SELECT state, subtotal, total FROM invoices LIMIT 1`)
-			.get() as { state: string; subtotal: number; total: number };
+		const inv = getDb().prepare(`SELECT state, subtotal, total FROM invoices LIMIT 1`).get() as {
+			state: string;
+			subtotal: number;
+			total: number;
+		};
 		expect(inv.state).toBe('invoice.draft');
 		expect(inv.subtotal).toBe(12500); // 1h × 12500 minor units
 		expect(inv.total).toBe(12500);
@@ -190,6 +192,73 @@ describe('Step 6.3 — edit draft (discount lines)', () => {
 	});
 });
 
+describe('Step 6.3 — edit draft (task lines)', () => {
+	function taskLineId(invId: string): string {
+		const row = getDb()
+			.prepare(`SELECT id FROM invoice_line_items WHERE invoice_id = ? AND kind = 'task'`)
+			.get(invId) as { id: string };
+		return row.id;
+	}
+
+	test('updateLine edits description/hours/rate and recomputes amount + invoice totals', async () => {
+		const { clientId } = seedClientWithStoppedEntry();
+		const invId = await createDraft(clientId);
+		const lineId = taskLineId(invId);
+
+		await invoiceActions.updateLine(
+			eventFor(
+				`/invoices/${invId}?/updateLine`,
+				{ id: invId },
+				{ lineId, description: 'Custom work', hours: '2', rate: '200' }
+			) as never
+		);
+
+		const line = getDb()
+			.prepare(`SELECT description, hours, rate, amount FROM invoice_line_items WHERE id = ?`)
+			.get(lineId) as { description: string; hours: number; rate: number; amount: number };
+		// rate 200 major → 20000 minor; amount = 2h × 20000 = 40000
+		expect(line).toEqual({ description: 'Custom work', hours: 2, rate: 20000, amount: 40000 });
+
+		const inv = getDb().prepare(`SELECT subtotal, total FROM invoices WHERE id = ?`).get(invId) as {
+			subtotal: number;
+			total: number;
+		};
+		expect(inv.subtotal).toBe(40000);
+		expect(inv.total).toBe(40000);
+	});
+
+	test('updateLine on a finalized invoice → 400 with rejectionReason=invoice_locked', async () => {
+		const { clientId } = seedClientWithStoppedEntry();
+		const invId = await createDraft(clientId);
+		const lineId = taskLineId(invId);
+		await invoiceActions.finalize(eventFor(`/invoices/${invId}?/finalize`, { id: invId }) as never);
+
+		const result = (await invoiceActions.updateLine(
+			eventFor(
+				`/invoices/${invId}?/updateLine`,
+				{ id: invId },
+				{ lineId, description: 'x', hours: '1', rate: '100' }
+			) as never
+		)) as { status: number; data: { rejectionReason: string } };
+		expect(result.status).toBe(400);
+		expect(result.data.rejectionReason).toBe('invoice_locked');
+	});
+
+	test('updateLine rejects non-positive hours', async () => {
+		const { clientId } = seedClientWithStoppedEntry();
+		const invId = await createDraft(clientId);
+		const lineId = taskLineId(invId);
+		const result = (await invoiceActions.updateLine(
+			eventFor(
+				`/invoices/${invId}?/updateLine`,
+				{ id: invId },
+				{ lineId, description: 'x', hours: '0', rate: '100' }
+			) as never
+		)) as { status: number };
+		expect(result.status).toBe(400);
+	});
+});
+
 describe('Steps 6.4 / 6.5 — finalize + guards', () => {
 	test('finalize assigns invoice_number and cascades entries to entry.locked', async () => {
 		const { clientId } = seedClientWithStoppedEntry();
@@ -238,9 +307,9 @@ describe('Step 6.7 — void cascade', () => {
 			eventFor(`/invoices/${invId}?/void`, { id: invId }, {}, VOID_CID) as never
 		);
 
-		const inv = getDb()
-			.prepare(`SELECT state FROM invoices WHERE id = ?`)
-			.get(invId) as { state: string };
+		const inv = getDb().prepare(`SELECT state FROM invoices WHERE id = ?`).get(invId) as {
+			state: string;
+		};
 		expect(inv.state).toBe('invoice.voided');
 		const discarded = getDb()
 			.prepare(`SELECT COUNT(*) AS n FROM time_entries WHERE state = 'entry.discarded'`)

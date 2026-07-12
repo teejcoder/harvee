@@ -92,6 +92,58 @@
 	<!-- Draft-only editing -->
 	{#if isDraft}
 		<section class="mb-6 rounded border border-gray-200 p-4">
+			<h2 class="mb-3 text-sm font-medium text-gray-700">Edit task lines</h2>
+			<ul class="space-y-3">
+				{#each data.lines.filter((l) => l.kind === 'task') as line (line.id)}
+					<li>
+						<form method="post" action="?/updateLine" class="flex flex-wrap items-end gap-2">
+							<input type="hidden" name="lineId" value={line.id} />
+							<label class="flex-1">
+								<span class="block text-xs text-gray-600">Description</span>
+								<input
+									name="description"
+									value={line.description}
+									class="w-full rounded border border-gray-300 px-2 py-1"
+									required
+								/>
+							</label>
+							<label>
+								<span class="block text-xs text-gray-600">Hours</span>
+								<input
+									name="hours"
+									type="number"
+									min="0.01"
+									step="0.01"
+									value={line.hours}
+									class="w-24 rounded border border-gray-300 px-2 py-1"
+									required
+								/>
+							</label>
+							<label>
+								<span class="block text-xs text-gray-600">Rate</span>
+								<input
+									name="rate"
+									type="number"
+									min="0.01"
+									step="0.01"
+									value={((line.rate ?? 0) / 100).toFixed(2)}
+									class="w-28 rounded border border-gray-300 px-2 py-1"
+									required
+								/>
+							</label>
+							<button
+								type="submit"
+								class="rounded bg-blue-600 px-3 py-1 text-sm font-medium text-white hover:bg-blue-700"
+							>
+								Save
+							</button>
+						</form>
+					</li>
+				{/each}
+			</ul>
+		</section>
+
+		<section class="mb-6 rounded border border-gray-200 p-4">
 			<h2 class="mb-2 text-sm font-medium text-gray-700">Discount line</h2>
 			{#if data.lines.some((l) => l.kind === 'discount')}
 				<form method="post" action="?/removeDiscount">

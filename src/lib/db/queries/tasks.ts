@@ -8,6 +8,7 @@ export interface Task {
 	id: string;
 	projectId: string;
 	name: string;
+	description: string;
 	archivedAt: string | null;
 	createdAt: string;
 	updatedAt: string;
@@ -15,21 +16,23 @@ export interface Task {
 
 export function createTask(
 	db: Database,
-	args: { id?: string; projectId: string; name: string },
+	args: { id?: string; projectId: string; name: string; description?: string },
 	correlationId: string
 ): Task {
 	requireCorrelationId(correlationId, 'createTask');
 	const id = args.id ?? ulid();
+	const description = args.description ?? '';
 	const now = nowUtcIso();
 	prep(
 		db,
-		`INSERT INTO tasks (id, project_id, name, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?)`
-	).run(id, args.projectId, args.name, now, now);
+		`INSERT INTO tasks (id, project_id, name, description, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?)`
+	).run(id, args.projectId, args.name, description, now, now);
 	const created: Task = {
 		id,
 		projectId: args.projectId,
 		name: args.name,
+		description,
 		archivedAt: null,
 		createdAt: now,
 		updatedAt: now

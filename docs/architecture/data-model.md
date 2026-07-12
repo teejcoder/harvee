@@ -45,7 +45,8 @@ The setup hierarchy. Each carries `name`, a nullable `archived_at`, and timestam
 
 - `projects.client_id → clients.id`, plus `projects.hourly_rate` (integer minor
   units — the rate every task under it inherits). Indexed on `client_id`.
-- `tasks.project_id → projects.id`. Indexed on `project_id`.
+- `tasks.project_id → projects.id`, plus an editable `description` (`NOT NULL
+DEFAULT ''`, added in migration `005`). Indexed on `project_id`.
 
 ### `time_entries` → `time_entry_segments`
 

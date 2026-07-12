@@ -18,7 +18,7 @@ function stateOf(row: { archivedAt: string | null }): 'task.active' | 'task.arch
 
 export function createTask(
 	db: Database,
-	args: { projectId: string; name: string },
+	args: { projectId: string; name: string; description?: string },
 	correlationId: string
 ): tasksQ.Task {
 	log.debug({ event: 'state.task.create.enter', correlationId, ...args });
@@ -58,6 +58,44 @@ export function createTask(
 		accepted: true
 	});
 	return created;
+}
+
+// Editing a task's name/description is a field edit, not a state transition
+// (the task stays task.active / task.archived), so it emits an INFO log with
+// before/after but no logTransition line — same pattern as entry.updateNotes.
+// Allowed in any state: a rename never touches already-snapshotted invoice
+// line descriptions, which are copied at generation time.
+export function updateTask(
+	db: Database,
+	args: { id: string; name: string; description: string },
+	correlationId: string
+): tasksQ.Task {
+	log.debug({ event: 'state.task.update.enter', correlationId, entityId: args.id });
+	const current = tasksQ.getTask(db, args.id);
+	if (!current) throw new Error(`task ${args.id} not found`);
+
+	const now = nowUtcIso();
+	db.prepare(`UPDATE tasks SET name = ?, description = ?, updated_at = ? WHERE id = ?`).run(
+		args.name,
+		args.description,
+		now,
+		args.id
+	);
+	const after: tasksQ.Task = {
+		...current,
+		name: args.name,
+		description: args.description,
+		updatedAt: now
+	};
+	log.info({
+		event: 'task.update',
+		correlationId,
+		entityType: 'task',
+		entityId: args.id,
+		before: { name: current.name, description: current.description },
+		after: { name: args.name, description: args.description }
+	});
+	return after;
 }
 
 export function archiveTask(db: Database, id: string, correlationId: string): void {

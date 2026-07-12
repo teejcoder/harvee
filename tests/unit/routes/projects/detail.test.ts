@@ -101,6 +101,22 @@ describe('POST /projects/[id] ?/create', () => {
 		});
 	});
 
+	test('creates a task with a description', async () => {
+		const client = createClient(getDb(), { name: 'A' }, CID);
+		const project = createProject(
+			getDb(),
+			{ clientId: client.id, name: 'P', hourlyRate: 10000 },
+			CID
+		);
+		await actions.create(
+			makeCreateEvent(project.id, { name: 'Auth', description: 'Login + sessions' }, CID) as never
+		);
+		const row = getDb()
+			.prepare(`SELECT name, description FROM tasks WHERE project_id = ?`)
+			.get(project.id) as { name: string; description: string };
+		expect(row).toMatchObject({ name: 'Auth', description: 'Login + sessions' });
+	});
+
 	test('rejects empty name', async () => {
 		const client = createClient(getDb(), { name: 'A' }, CID);
 		const project = createProject(
@@ -110,6 +126,50 @@ describe('POST /projects/[id] ?/create', () => {
 		);
 		const event = makeCreateEvent(project.id, { name: '   ' }, CID);
 		const result = (await actions.create(event as never)) as { status: number };
+		expect(result.status).toBe(400);
+	});
+});
+
+describe('POST /projects/[id] ?/updateTask', () => {
+	async function seedTask(): Promise<{ projectId: string; taskId: string }> {
+		const client = createClient(getDb(), { name: 'A' }, CID);
+		const project = createProject(
+			getDb(),
+			{ clientId: client.id, name: 'P', hourlyRate: 10000 },
+			CID
+		);
+		const created = (await actions.create(
+			makeCreateEvent(project.id, { name: 'Old', description: 'old desc' }, CID) as never
+		)) as { taskId: string };
+		return { projectId: project.id, taskId: created.taskId };
+	}
+
+	test('renames a task and edits its description', async () => {
+		const { projectId, taskId } = await seedTask();
+		const result = (await actions.updateTask(
+			makeCreateEvent(projectId, { taskId, name: 'New', description: 'new desc' }, CID) as never
+		)) as { success: boolean };
+		expect(result.success).toBe(true);
+
+		const row = getDb().prepare(`SELECT name, description FROM tasks WHERE id = ?`).get(taskId) as {
+			name: string;
+			description: string;
+		};
+		expect(row).toEqual({ name: 'New', description: 'new desc' });
+
+		const updateLine = readFileSync(logFile, 'utf8')
+			.split('\n')
+			.filter((l) => l.length > 0)
+			.map((l) => JSON.parse(l))
+			.find((l: Record<string, unknown>) => l.event === 'task.update');
+		expect(updateLine).toMatchObject({ after: { name: 'New', description: 'new desc' } });
+	});
+
+	test('rejects empty name', async () => {
+		const { projectId, taskId } = await seedTask();
+		const result = (await actions.updateTask(
+			makeCreateEvent(projectId, { taskId, name: '  ', description: 'x' }, CID) as never
+		)) as { status: number };
 		expect(result.status).toBe(400);
 	});
 });
