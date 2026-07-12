@@ -40,8 +40,8 @@ Data lives in `./data.sqlite` (hardcoded). Migrations in `db/migrations/*.sql` a
 ```
 .memory/     agent memory — source of truth for product intent, state model, stack
 docs/        VitePress site — internal documentation + changelog
-db/          migrations/ and hand-written queries/
-src/         SvelteKit app (routes, lib, state machines, PDF renderer)
+db/          migrations/ — schema, applied on startup
+src/         SvelteKit app (routes, lib, state machines, query modules, PDF renderer)
 logs/        JSONL transition log
 ```
 

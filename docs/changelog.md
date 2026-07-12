@@ -6,6 +6,21 @@ All notable changes to this project are documented here. Format follows [Keep a 
 
 ### Added
 
+#### Phase summary
+
+A dated, one-line map of the build. Each bullet is a completed phase; the detailed per-step entries follow below.
+
+- **Phase 0 — Foundations** (2026-07-11): repo skeleton (SvelteKit 2 / Svelte 5 / TS strict / Tailwind v4), VitePress docs site, the ULID / time / structured-log modules, and the correlation-ID hook.
+- **Phase 1 — Data layer** (2026-07-11): the SQLite migration runner and the full schema (settings, clients/projects/tasks, invoices + line items, time entries + segments), plus typed per-entity query modules.
+- **Phase 2 — State machines** (2026-07-12): the client/project/task, time-entry, and invoice state machines, each wired to the transition logger and gated by an end-to-end scenario test.
+- **Phase 3 — Setup UI** (2026-07-12): `/settings`, `/clients`, and `/projects/[id]` with create and archive/unarchive, enforcing the "block archive if children" rule.
+- **Phase 4 — Timer** (2026-07-12): the persistent timer widget (start / stop / concurrent-timer rejection) and the entry detail page with notes, the multi-segment editor, and resume.
+- **Phase 5 — Calendar** (2026-07-12): historical day / week / month views computed on system-local day boundaries.
+- **Phase 6 — Invoicing** (2026-07-12): generate a draft from unbilled entries, edit task/discount lines, finalize (numbering + entry lock cascade), void, and export a `pdf-lib` PDF to `invoices/<number>.pdf`.
+- **Phase 7 — Documentation** (2026-07-12): the architecture pages (overview, state machines, data model), the guides (running locally, generating an invoice, editing time entries), and this changelog backfill.
+
+#### Detail
+
 - Initial repo skeleton: SvelteKit 2 + Svelte 5 (runes) + TypeScript strict + Tailwind v4 on Node 22, with Prettier, ESLint, and Vitest configured.
 - Vitest test workspaces: `unit` (Node) and `component` (jsdom, `@testing-library/svelte`). Test root at `tests/{unit,component,e2e}/`.
 - Playwright end-to-end test harness (`playwright.config.ts`), booting against `pnpm preview`.
