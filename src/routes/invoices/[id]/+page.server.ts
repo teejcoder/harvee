@@ -6,7 +6,6 @@ import { log } from '$lib/log';
 import {
 	addDiscountLine,
 	deleteDraft,
-	exportInvoice,
 	finalizeInvoice,
 	removeDiscountLine,
 	voidInvoice
@@ -21,9 +20,10 @@ export const load: PageServerLoad = ({ params }) => {
 	const invoice = getInvoice(db, params.id);
 	if (!invoice) throw error(404, `Invoice ${params.id} not found`);
 
-	const client = db
-		.prepare(`SELECT id, name FROM clients WHERE id = ?`)
-		.get(invoice.clientId) as { id: string; name: string };
+	const client = db.prepare(`SELECT id, name FROM clients WHERE id = ?`).get(invoice.clientId) as {
+		id: string;
+		name: string;
+	};
 
 	const lines = listInvoiceLines(db, params.id);
 
@@ -44,8 +44,7 @@ export const actions: Actions = {
 		const form = await request.formData();
 		const description = String(form.get('description') ?? '').trim() || 'Discount';
 		const amountInput = Number(form.get('amount'));
-		if (!Number.isFinite(amountInput))
-			return fail(400, { error: 'Amount must be a number' });
+		if (!Number.isFinite(amountInput)) return fail(400, { error: 'Amount must be a number' });
 		// Positive input from the user represents the discount magnitude; store as negative minor units.
 		const amount = -Math.round(Math.abs(amountInput) * 100);
 		try {
@@ -72,17 +71,6 @@ export const actions: Actions = {
 		if (!correlationId) return fail(500, { error: 'correlationId missing on locals' });
 		try {
 			finalizeInvoice(getDb(), params.id, correlationId);
-			return { success: true };
-		} catch (err) {
-			return toActionResult(err);
-		}
-	},
-
-	export: async ({ locals, params }) => {
-		const correlationId = locals.correlationId;
-		if (!correlationId) return fail(500, { error: 'correlationId missing on locals' });
-		try {
-			exportInvoice(getDb(), params.id, correlationId);
 			return { success: true };
 		} catch (err) {
 			return toActionResult(err);

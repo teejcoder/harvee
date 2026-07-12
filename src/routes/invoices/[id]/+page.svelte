@@ -21,9 +21,8 @@
 
 <div class="mx-auto max-w-3xl p-6">
 	<nav class="mb-4 text-sm">
-		<a
-			href={resolve('/clients/[id]', { id: data.client.id })}
-			class="text-blue-700 hover:underline">← {data.client.name}</a
+		<a href={resolve('/clients/[id]', { id: data.client.id })} class="text-blue-700 hover:underline"
+			>← {data.client.name}</a
 		>
 	</nav>
 
@@ -38,9 +37,7 @@
 	</p>
 
 	{#if form && 'success' in form && form.success}
-		<div class="mb-4 rounded border border-green-300 bg-green-50 p-3 text-green-800">
-			Saved.
-		</div>
+		<div class="mb-4 rounded border border-green-300 bg-green-50 p-3 text-green-800">Saved.</div>
 	{/if}
 	{#if form && 'error' in form && form.error}
 		<div class="mb-4 rounded border border-red-300 bg-red-50 p-3 text-red-800">
@@ -158,12 +155,12 @@
 			</form>
 		{/if}
 		{#if isFinalizedish}
-			<form method="post" action="?/export">
+			<form method="post" action={resolve('/invoices/[id]/export', { id: data.invoice.id })}>
 				<button
 					type="submit"
 					class="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
 				>
-					Mark as exported
+					Export PDF
 				</button>
 			</form>
 			<form method="post" action="?/void">
