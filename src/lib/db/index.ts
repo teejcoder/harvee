@@ -31,9 +31,16 @@ export function openDb(
 	return db;
 }
 
+/** DATABASE_PATH env var overrides the hardcoded default — for tests. */
 export function getDb(): SqliteDatabase {
-	if (!cached) cached = openDb();
+	if (!cached) cached = openDb(process.env.DATABASE_PATH ?? DEFAULT_DB_PATH);
 	return cached;
+}
+
+/** Test-only. Drops the memoized singleton so the next `getDb()` re-opens. */
+export function _resetDbCacheForTests(): void {
+	if (cached) cached.close();
+	cached = undefined;
 }
 
 function runMigrations(db: SqliteDatabase, migrationsDir: string): void {
