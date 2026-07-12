@@ -36,6 +36,36 @@
 		<p class="mb-4 text-sm text-gray-500">Archived {data.client.archivedAt}</p>
 	{/if}
 
+	<section class="mt-6 rounded border border-gray-200 p-4">
+		<h2 class="mb-2 text-sm font-medium text-gray-700">Generate invoice</h2>
+		<form method="post" action="?/generateInvoice" class="flex flex-wrap items-end gap-2">
+			<label>
+				<span class="block text-xs text-gray-600">Start date</span>
+				<input
+					name="startDate"
+					type="date"
+					class="rounded border border-gray-300 px-3 py-2"
+					required
+				/>
+			</label>
+			<label>
+				<span class="block text-xs text-gray-600">End date</span>
+				<input
+					name="endDate"
+					type="date"
+					class="rounded border border-gray-300 px-3 py-2"
+					required
+				/>
+			</label>
+			<button
+				type="submit"
+				class="rounded bg-emerald-600 px-4 py-2 font-medium text-white hover:bg-emerald-700"
+			>
+				Generate
+			</button>
+		</form>
+	</section>
+
 	<h2 class="mt-8 mb-3 text-lg font-medium">Projects</h2>
 
 	{#if form && 'success' in form && form.success}

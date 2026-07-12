@@ -1,9 +1,10 @@
-import { error, fail } from '@sveltejs/kit';
+import { error, fail, redirect } from '@sveltejs/kit';
 import { getDb } from '$lib/db';
 import { getClient } from '$lib/db/queries/clients';
 import { log } from '$lib/log';
 import { archiveClient, unarchiveClient } from '$lib/state/client';
 import { archiveProject, createProject, unarchiveProject } from '$lib/state/project';
+import { generateDraftInvoice } from '$lib/state/invoice';
 import { StateTransitionError } from '$lib/state/_error';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -141,5 +142,39 @@ export const actions: Actions = {
 			correlationId,
 			'routes.projects.unarchive.failed'
 		);
+	},
+
+	generateInvoice: async ({ request, locals, params }) => {
+		const correlationId = locals.correlationId;
+		if (!correlationId) return fail(500, { error: 'correlationId missing on locals' });
+		const form = await request.formData();
+		const startDate = String(form.get('startDate') ?? '');
+		const endDate = String(form.get('endDate') ?? '');
+		if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate))
+			return fail(400, { error: 'Both dates must be YYYY-MM-DD' });
+
+		try {
+			const invoice = generateDraftInvoice(
+				getDb(),
+				{ clientId: params.id, startDate, endDate },
+				correlationId
+			);
+			throw redirect(303, `/invoices/${invoice.id}`);
+		} catch (err) {
+			// SvelteKit uses `throw redirect(...)` — rethrow if that's what we caught.
+			if (err && typeof err === 'object' && 'status' in err && 'location' in err) throw err;
+			if (err instanceof StateTransitionError) {
+				return fail(400, {
+					error: err.message,
+					rejectionReason: err.rejectionReason
+				});
+			}
+			log.error({
+				event: 'routes.invoices.generate.failed',
+				correlationId,
+				error: { message: (err as Error).message, stack: (err as Error).stack }
+			});
+			return fail(500, { error: (err as Error).message });
+		}
 	}
 };

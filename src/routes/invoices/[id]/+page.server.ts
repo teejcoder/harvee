@@ -1,0 +1,113 @@
+import { error, fail } from '@sveltejs/kit';
+import { getDb } from '$lib/db';
+import { getInvoice } from '$lib/db/queries/invoices';
+import { listInvoiceLines } from '$lib/db/queries/lineItems';
+import { log } from '$lib/log';
+import {
+	addDiscountLine,
+	deleteDraft,
+	exportInvoice,
+	finalizeInvoice,
+	removeDiscountLine,
+	voidInvoice
+} from '$lib/state/invoice';
+import { StateTransitionError } from '$lib/state/_error';
+import type { Actions, PageServerLoad } from './$types';
+
+export const load: PageServerLoad = ({ params }) => {
+	const db = getDb();
+	log.debug({ event: 'routes.invoices.detail.load', entityId: params.id });
+
+	const invoice = getInvoice(db, params.id);
+	if (!invoice) throw error(404, `Invoice ${params.id} not found`);
+
+	const client = db
+		.prepare(`SELECT id, name FROM clients WHERE id = ?`)
+		.get(invoice.clientId) as { id: string; name: string };
+
+	const lines = listInvoiceLines(db, params.id);
+
+	return { invoice, client, lines };
+};
+
+function toActionResult(err: unknown): ReturnType<typeof fail> {
+	if (err instanceof StateTransitionError) {
+		return fail(400, { error: err.message, rejectionReason: err.rejectionReason });
+	}
+	return fail(500, { error: (err as Error).message });
+}
+
+export const actions: Actions = {
+	addDiscount: async ({ request, locals, params }) => {
+		const correlationId = locals.correlationId;
+		if (!correlationId) return fail(500, { error: 'correlationId missing on locals' });
+		const form = await request.formData();
+		const description = String(form.get('description') ?? '').trim() || 'Discount';
+		const amountInput = Number(form.get('amount'));
+		if (!Number.isFinite(amountInput))
+			return fail(400, { error: 'Amount must be a number' });
+		// Positive input from the user represents the discount magnitude; store as negative minor units.
+		const amount = -Math.round(Math.abs(amountInput) * 100);
+		try {
+			addDiscountLine(getDb(), { invoiceId: params.id, description, amount }, correlationId);
+			return { success: true };
+		} catch (err) {
+			return toActionResult(err);
+		}
+	},
+
+	removeDiscount: async ({ locals, params }) => {
+		const correlationId = locals.correlationId;
+		if (!correlationId) return fail(500, { error: 'correlationId missing on locals' });
+		try {
+			removeDiscountLine(getDb(), params.id, correlationId);
+			return { success: true };
+		} catch (err) {
+			return toActionResult(err);
+		}
+	},
+
+	finalize: async ({ locals, params }) => {
+		const correlationId = locals.correlationId;
+		if (!correlationId) return fail(500, { error: 'correlationId missing on locals' });
+		try {
+			finalizeInvoice(getDb(), params.id, correlationId);
+			return { success: true };
+		} catch (err) {
+			return toActionResult(err);
+		}
+	},
+
+	export: async ({ locals, params }) => {
+		const correlationId = locals.correlationId;
+		if (!correlationId) return fail(500, { error: 'correlationId missing on locals' });
+		try {
+			exportInvoice(getDb(), params.id, correlationId);
+			return { success: true };
+		} catch (err) {
+			return toActionResult(err);
+		}
+	},
+
+	void: async ({ locals, params }) => {
+		const correlationId = locals.correlationId;
+		if (!correlationId) return fail(500, { error: 'correlationId missing on locals' });
+		try {
+			voidInvoice(getDb(), params.id, correlationId);
+			return { success: true };
+		} catch (err) {
+			return toActionResult(err);
+		}
+	},
+
+	delete: async ({ locals, params }) => {
+		const correlationId = locals.correlationId;
+		if (!correlationId) return fail(500, { error: 'correlationId missing on locals' });
+		try {
+			deleteDraft(getDb(), params.id, correlationId);
+			return { success: true, deleted: true };
+		} catch (err) {
+			return toActionResult(err);
+		}
+	}
+};
