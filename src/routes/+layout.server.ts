@@ -1,9 +1,13 @@
 import { getDb } from '$lib/db';
+import { localDateOf, nowUtcIso } from '$lib/time';
 import type { RunningEntryView, TaskOption } from '$lib/components/timer-types';
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = () => {
 	const db = getDb();
+
+	// Today's local date, used by the nav to link to the current day/month views.
+	const today = localDateOf(nowUtcIso());
 
 	const activeTasks = db
 		.prepare(
@@ -42,5 +46,5 @@ export const load: LayoutServerLoad = () => {
 		)
 		.get() as RunningEntryView | undefined;
 
-	return { activeTasks, running: running ?? null };
+	return { activeTasks, running: running ?? null, today };
 };
