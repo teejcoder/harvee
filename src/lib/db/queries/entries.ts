@@ -25,11 +25,11 @@ export interface TimeEntry {
 
 export function createEntry(
 	db: Database,
-	args: { taskId: string; notes?: string; state: EntryState },
+	args: { id?: string; taskId: string; notes?: string; state: EntryState },
 	correlationId: string
 ): TimeEntry {
 	requireCorrelationId(correlationId, 'createEntry');
-	const id = ulid();
+	const id = args.id ?? ulid();
 	const now = nowUtcIso();
 	const notes = args.notes ?? '';
 	prep(
