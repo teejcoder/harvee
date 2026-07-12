@@ -176,6 +176,18 @@ export async function renderInvoicePdf(
 	if (invoice.discountTotal !== 0) totalRow('Discount', money(invoice.discountTotal));
 	totalRow('Total', money(invoice.total), true);
 
+	// --- Payment instructions (multiline, same handling as the sender address) ---
+	if (settings.paymentInstructions.trim().length > 0) {
+		y -= 12;
+		text('Payment instructions', MARGIN, y, 8, bold, MUTED);
+		y -= 14;
+		for (const line of settings.paymentInstructions.split('\n')) {
+			if (line.trim().length === 0) continue;
+			text(line, MARGIN, y, 10);
+			y -= 13;
+		}
+	}
+
 	// --- Footer ---
 	text(
 		dueDate ? `Payment due by ${dueDate}.` : 'Draft — not yet finalized.',

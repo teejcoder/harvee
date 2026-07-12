@@ -55,6 +55,7 @@ A dated, one-line map of the build. Each bullet is a completed phase; the detail
 
 ### Fixed
 
+- Invoice PDFs now render the sender's **payment instructions**. `settings.payment_instructions` was captured by the schema and the `/settings` form and threaded through the `Settings` type, but the `pdf-lib` renderer never printed it — so the field `.memory/domain-model.md` §4 says is "rendered on the PDF" was silently dropped. `src/lib/pdf/invoice.ts` now draws a multiline "Payment instructions" block between the totals and the footer (skipped when the field is blank), matching how the sender address is handled.
 - `CLAUDE.md` §4.4 was inconsistent with `.memory/conventions.md` §5 on correlation IDs (said "always"; conventions says "state-changing chains only"). Corrected `CLAUDE.md` to align with the earlier decision.
 
 ### Changed
