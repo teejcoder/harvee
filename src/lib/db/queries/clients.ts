@@ -7,6 +7,7 @@ import { prep, requireCorrelationId, rowToCamel } from './_helpers';
 export interface Client {
 	id: string;
 	name: string;
+	defaultPaymentTermsDays: number | null;
 	archivedAt: string | null;
 	createdAt: string;
 	updatedAt: string;
@@ -29,6 +30,7 @@ export function createClient(
 	const created: Client = {
 		id,
 		name: args.name,
+		defaultPaymentTermsDays: null,
 		archivedAt: null,
 		createdAt: now,
 		updatedAt: now

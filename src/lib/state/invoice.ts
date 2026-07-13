@@ -137,6 +137,13 @@ export function generateDraftInvoice(
 	}
 
 	const settings = settingsQ.getSettings(db);
+	// Per-client default payment terms override the global settings default (§7).
+	const clientTerms = (
+		db
+			.prepare(`SELECT default_payment_terms_days AS d FROM clients WHERE id = ?`)
+			.get(args.clientId) as { d: number | null } | undefined
+	)?.d;
+	const paymentTermsDays = clientTerms ?? settings.defaultPaymentTermsDays;
 	let subtotal = 0;
 	const taskLines: {
 		taskId: string;
@@ -167,7 +174,7 @@ export function generateDraftInvoice(
 				clientId: args.clientId,
 				startDate: args.startDate,
 				endDate: args.endDate,
-				paymentTermsDays: settings.defaultPaymentTermsDays,
+				paymentTermsDays,
 				currencyCode: settings.currencyCode,
 				currencyDecimals: settings.currencyDecimals,
 				invoiceLocale: settings.invoiceLocale,

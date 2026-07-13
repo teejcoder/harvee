@@ -76,7 +76,8 @@ Editable via a `/settings` page in the UI. There is exactly one row and it alway
 ## 7. Payment terms and due date
 
 - Default payment term in days lives in `settings.default_payment_terms_days`.
-- Each invoice has its own `payment_terms_days` column, initialized from the settings default at draft creation.
+- A client may set its own `clients.default_payment_terms_days` (nullable); when set it overrides the settings default for that client's invoices. NULL falls back to the settings default.
+- Each invoice has its own `payment_terms_days` column, initialized at draft creation from the client's default (if any), else the settings default.
 - Editable while `invoice.draft`. Frozen at finalize.
 - Due date is computed at render time: `due_date = finalized_at (date) + payment_terms_days`. Displayed on the PDF and the invoice detail page. Not stored.
 
@@ -123,7 +124,7 @@ An invoice has two kinds of line items:
 | Table                 | Key columns                                                                                                                                                                                                                                                          |
 | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `settings`            | id (always 1), sender fields, currency_code, currency_decimals, default_payment_terms_days, invoice_locale                                                                                                                                                           |
-| `clients`             | id (ULID), name, archived_at (nullable), timestamps                                                                                                                                                                                                                  |
+| `clients`             | id (ULID), name, default_payment_terms_days (nullable — overrides settings default), archived_at (nullable), timestamps                                                                                                                                              |
 | `projects`            | id, client_id, name, hourly_rate (int minor units), archived_at, timestamps                                                                                                                                                                                          |
 | `tasks`               | id, project_id, name, description, archived_at, timestamps                                                                                                                                                                                                           |
 | `time_entries`        | id, task_id, notes, state (`entry.*`), invoice_id (nullable), edit_form_snapshot (nullable JSON for `entry.editing`), timestamps                                                                                                                                     |

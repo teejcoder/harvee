@@ -60,30 +60,47 @@ export const load: PageServerLoad = ({ params }) => {
 	const invoices = listInvoices(db, { clientId: params.id });
 	const settings = getSettings(db);
 
-	// Unbilled time for this client — stopped entries not yet locked onto an invoice.
-	// Gives the user a "here's what's billable" signal before generating.
-	const unbilled = db
+	// Unbilled time for this client — a per-task preview of what would be billed,
+	// so the user sees exactly what's ready before generating an invoice.
+	const unbilledRows = db
 		.prepare(
 			`SELECT
-				COALESCE(SUM(
-					CASE WHEN s.stopped_at IS NOT NULL
-						THEN strftime('%s', s.stopped_at) - strftime('%s', s.started_at)
-						ELSE 0 END
-				), 0) AS sec,
-				COUNT(DISTINCT e.id) AS entries
+				t.name AS taskName,
+				p.name AS projectName,
+				p.hourly_rate AS rate,
+				COALESCE(SUM(strftime('%s', s.stopped_at) - strftime('%s', s.started_at)), 0) AS sec
 			 FROM time_entries e
 			 JOIN tasks t ON e.task_id = t.id
 			 JOIN projects p ON t.project_id = p.id
-			 LEFT JOIN time_entry_segments s ON s.entry_id = e.id
-			 WHERE p.client_id = ? AND e.state = 'entry.stopped'`
+			 JOIN time_entry_segments s ON s.entry_id = e.id AND s.stopped_at IS NOT NULL
+			 WHERE p.client_id = ? AND e.state = 'entry.stopped'
+			 GROUP BY t.id
+			 HAVING sec > 0
+			 ORDER BY p.name COLLATE NOCASE, t.name COLLATE NOCASE`
 		)
-		.get(params.id) as { sec: number; entries: number };
+		.all(params.id) as { taskName: string; projectName: string; rate: number; sec: number }[];
+
+	const unbilledLines = unbilledRows.map((r) => {
+		const hours = r.sec / 3600;
+		return {
+			taskName: r.taskName,
+			projectName: r.projectName,
+			hours,
+			rate: r.rate,
+			amount: Math.round(hours * r.rate)
+		};
+	});
+	const unbilled = {
+		hours: unbilledLines.reduce((s, l) => s + l.hours, 0),
+		amount: unbilledLines.reduce((s, l) => s + l.amount, 0),
+		lines: unbilledLines
+	};
 
 	return {
 		client,
 		projects,
 		invoices,
-		unbilled: { hours: unbilled.sec / 3600, entries: unbilled.entries },
+		unbilled,
 		currency: {
 			code: settings.currencyCode,
 			decimals: settings.currencyDecimals,
@@ -139,7 +156,9 @@ export const actions: Actions = {
 	rename: async ({ request, locals, params }) => {
 		const correlationId = locals.correlationId;
 		if (!correlationId) return fail(500, { error: 'correlationId missing on locals' });
-		const name = String((await request.formData()).get('name') ?? '').trim();
+		const form = await request.formData();
+		const name = String(form.get('name') ?? '').trim();
+		const termsRaw = String(form.get('defaultPaymentTermsDays') ?? '').trim();
 		if (name.length === 0) {
 			log.warn({
 				event: 'routes.clients.rename.validation.rejected',
@@ -150,9 +169,25 @@ export const actions: Actions = {
 			});
 			return fail(400, { error: 'Name is required' });
 		}
+		// Empty → null (use the global settings default); a number → per-client override.
+		let defaultPaymentTermsDays: number | null = null;
+		if (termsRaw.length > 0) {
+			const n = Number(termsRaw);
+			if (!Number.isFinite(n) || n < 0 || !Number.isInteger(n)) {
+				log.warn({
+					event: 'routes.clients.rename.validation.rejected',
+					correlationId,
+					entityType: 'client',
+					entityId: params.id,
+					reason: 'invalid_terms'
+				});
+				return fail(400, { error: 'Payment terms must be a whole number of days' });
+			}
+			defaultPaymentTermsDays = n;
+		}
 		return handleTransition(
 			() => {
-				updateClient(getDb(), { id: params.id, name }, correlationId);
+				updateClient(getDb(), { id: params.id, name, defaultPaymentTermsDays }, correlationId);
 				return { success: true };
 			},
 			correlationId,

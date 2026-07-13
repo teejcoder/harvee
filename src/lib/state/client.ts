@@ -43,27 +43,30 @@ export function createClient(
 // INFO log with before/after, no logTransition line (same pattern as updateTask).
 export function updateClient(
 	db: Database,
-	args: { id: string; name: string },
+	args: { id: string; name: string; defaultPaymentTermsDays?: number | null },
 	correlationId: string
 ): clientsQ.Client {
 	log.debug({ event: 'state.client.update.enter', correlationId, entityId: args.id });
 	const current = clientsQ.getClient(db, args.id);
 	if (!current) throw new Error(`client ${args.id} not found`);
+	// undefined = leave terms unchanged; null = clear (fall back to settings default).
+	const terms =
+		args.defaultPaymentTermsDays === undefined
+			? current.defaultPaymentTermsDays
+			: args.defaultPaymentTermsDays;
 	const now = nowUtcIso();
-	db.prepare(`UPDATE clients SET name = ?, updated_at = ? WHERE id = ?`).run(
-		args.name,
-		now,
-		args.id
-	);
+	db.prepare(
+		`UPDATE clients SET name = ?, default_payment_terms_days = ?, updated_at = ? WHERE id = ?`
+	).run(args.name, terms, now, args.id);
 	log.info({
 		event: 'client.update',
 		correlationId,
 		entityType: 'client',
 		entityId: args.id,
-		before: { name: current.name },
-		after: { name: args.name }
+		before: { name: current.name, defaultPaymentTermsDays: current.defaultPaymentTermsDays },
+		after: { name: args.name, defaultPaymentTermsDays: terms }
 	});
-	return { ...current, name: args.name, updatedAt: now };
+	return { ...current, name: args.name, defaultPaymentTermsDays: terms, updatedAt: now };
 }
 
 export function archiveClient(db: Database, id: string, correlationId: string): void {

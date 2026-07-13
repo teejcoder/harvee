@@ -46,17 +46,32 @@
 	</nav>
 
 	<div class="mb-1 flex flex-wrap items-center justify-between gap-2">
-		<form method="post" use:enhance action="?/rename" class="flex items-center gap-2">
-			<input
-				name="name"
-				value={data.client.name}
-				class="rounded border border-gray-300 px-2 py-1 text-2xl font-semibold"
-				required
-				aria-label="Client name"
-			/>
+		<form method="post" use:enhance action="?/rename" class="flex flex-wrap items-end gap-2">
+			<label>
+				<span class="block text-xs text-gray-600">Client</span>
+				<input
+					name="name"
+					value={data.client.name}
+					class="rounded border border-gray-300 px-2 py-1 text-2xl font-semibold"
+					required
+					aria-label="Client name"
+				/>
+			</label>
+			<label>
+				<span class="block text-xs text-gray-600">Payment terms (days)</span>
+				<input
+					name="defaultPaymentTermsDays"
+					type="number"
+					min="0"
+					step="1"
+					value={data.client.defaultPaymentTermsDays ?? ''}
+					placeholder="default"
+					class="w-24 rounded border border-gray-300 px-2 py-1"
+				/>
+			</label>
 			<button
 				type="submit"
-				class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50">Rename</button
+				class="rounded border border-gray-300 px-2 py-1 text-sm hover:bg-gray-50">Save</button
 			>
 		</form>
 		<div class="flex gap-2">
@@ -101,14 +116,31 @@
 
 	<section class="mt-6 rounded border border-gray-200 p-4">
 		<h2 class="mb-1 text-sm font-medium text-gray-700">Generate invoice</h2>
-		<p class="mb-3 text-xs text-gray-500">
-			{#if data.unbilled.entries > 0}
-				{data.unbilled.hours.toFixed(2)}h of unbilled time ready to bill ({data.unbilled.entries}
-				{data.unbilled.entries === 1 ? 'entry' : 'entries'}).
-			{:else}
-				No unbilled time for this client yet.
-			{/if}
-		</p>
+		{#if data.unbilled.lines.length === 0}
+			<p class="mb-3 text-xs text-gray-500">No unbilled time for this client yet.</p>
+		{:else}
+			<p class="mb-2 text-xs text-gray-500">
+				Unbilled and ready to bill (all stopped time not yet on an invoice):
+			</p>
+			<table class="mb-3 w-full text-sm">
+				<tbody class="divide-y divide-gray-100">
+					{#each data.unbilled.lines as l (l.projectName + l.taskName)}
+						<tr>
+							<td class="py-1">{l.projectName} · {l.taskName}</td>
+							<td class="py-1 text-right font-mono">{l.hours.toFixed(2)}h</td>
+							<td class="py-1 text-right font-mono">{rate(l.amount)}</td>
+						</tr>
+					{/each}
+				</tbody>
+				<tfoot class="border-t border-gray-300">
+					<tr class="font-medium">
+						<td class="py-1">{data.unbilled.hours.toFixed(2)}h total</td>
+						<td></td>
+						<td class="py-1 text-right font-mono">{rate(data.unbilled.amount)}</td>
+					</tr>
+				</tfoot>
+			</table>
+		{/if}
 
 		<div class="mb-3 flex flex-wrap gap-1">
 			{#each [['thisMonth', 'This month'], ['lastMonth', 'Last month'], ['last7', 'Last 7 days']] as [kind, label] (kind)}
