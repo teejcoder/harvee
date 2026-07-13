@@ -63,12 +63,26 @@ export const POST: RequestHandler = async ({ locals, params }) => {
 	const settings = getSettings(db);
 	const lines = listInvoiceLines(db, params.id);
 
-	const bytes = await renderInvoicePdf({ invoice, client, settings, lines }, correlationId);
-
+	let bytes: Uint8Array;
 	const dir = invoiceDir();
-	mkdirSync(dir, { recursive: true });
 	const filePath = join(dir, `${invoice.invoiceNumber}.pdf`);
-	writeFileSync(filePath, bytes);
+	try {
+		bytes = await renderInvoicePdf({ invoice, client, settings, lines }, correlationId);
+		mkdirSync(dir, { recursive: true });
+		writeFileSync(filePath, bytes);
+	} catch (err) {
+		// Rendering/writing must never fail silently — it would leave the invoice
+		// marked exported with no file. Log at ERROR with full context and 500.
+		log.error({
+			event: 'invoice.pdf.render.failed',
+			correlationId,
+			entityType: 'invoice',
+			entityId: invoice.id,
+			inputs: { invoiceNumber: invoice.invoiceNumber, filePath },
+			error: { message: (err as Error).message, stack: (err as Error).stack }
+		});
+		throw error(500, 'Failed to render invoice PDF');
+	}
 	log.info({
 		event: 'invoice.pdf.written',
 		correlationId,

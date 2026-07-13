@@ -115,4 +115,23 @@ export function logTransition(entry: TransitionEntry): void {
 		accepted: entry.accepted,
 		rejectionReason: entry.accepted ? null : entry.rejectionReason
 	});
+
+	// A rejected transition is a recoverable anomaly (CLAUDE.md §4.2 → WARN) and a
+	// security-relevant event. The transition line above is level-less by schema,
+	// so emit a companion WARN line so rejections are greppable by `level:"warn"`
+	// for incident response — carrying the correlationId and rejectionReason.
+	if (!entry.accepted) {
+		// Note: intentionally does NOT use the `previousState`/`newState` keys — those
+		// identify a canonical transition-log line. This is a general WARN log line.
+		log.warn({
+			event: 'transition.rejected',
+			correlationId: entry.correlationId,
+			entityType: entry.entityType,
+			entityId: entry.entityId,
+			fromState: entry.previousState,
+			attemptedState: entry.newState,
+			trigger: entry.trigger,
+			rejectionReason: entry.rejectionReason
+		});
+	}
 }

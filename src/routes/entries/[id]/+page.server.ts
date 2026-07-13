@@ -118,8 +118,16 @@ export const actions: Actions = {
 		const segmentId = String(form.get('segmentId') ?? '');
 		const startedAtLocal = String(form.get('startedAt') ?? '');
 		const stoppedAtLocal = String(form.get('stoppedAt') ?? '');
-		if (!segmentId || !startedAtLocal)
+		if (!segmentId || !startedAtLocal) {
+			log.warn({
+				event: 'routes.entries.updateSegment.validation.rejected',
+				correlationId,
+				entityType: 'segment',
+				entityId: segmentId || undefined,
+				reason: !segmentId ? 'missing_segment_id' : 'missing_started_at'
+			});
 			return fail(400, { error: 'segmentId and started time required' });
+		}
 		// Inputs are local wall-clock (datetime-local); store as UTC ISO.
 		const startedAt = utcIsoFromLocalDateTime(startedAtLocal);
 		const stoppedAt = stoppedAtLocal.length > 0 ? utcIsoFromLocalDateTime(stoppedAtLocal) : null;

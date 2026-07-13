@@ -31,7 +31,15 @@ export const actions: Actions = {
 
 		const form = await request.formData();
 		const name = String(form.get('name') ?? '').trim();
-		if (name.length === 0) return fail(400, { error: 'Name is required' });
+		if (name.length === 0) {
+			log.warn({
+				event: 'routes.clients.create.validation.rejected',
+				correlationId,
+				entityType: 'client',
+				reason: 'empty_name'
+			});
+			return fail(400, { error: 'Name is required' });
+		}
 
 		try {
 			const client = createClient(getDb(), { name }, correlationId);

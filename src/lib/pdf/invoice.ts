@@ -33,6 +33,31 @@ function addDays(localDate: string, days: number): string {
 	return d.toISOString().slice(0, 10);
 }
 
+// pdf-lib's standard fonts encode with WinAnsi (CP1252) and THROW on any code
+// point it can't represent. Every string we draw may contain user-supplied text
+// (line/task descriptions, notes, sender fields, payment instructions), so an
+// emoji or CJK char could otherwise crash the whole export — a denial-of-service
+// on invoicing. Sanitize defensively: keep everything CP1252 can encode, replace
+// the rest. This is the trust boundary between user input and the PDF encoder.
+const CP1252_EXTRAS = new Set([
+	0x20ac, 0x201a, 0x0192, 0x201e, 0x2026, 0x2020, 0x2021, 0x02c6, 0x2030, 0x0160, 0x2039, 0x0152,
+	0x017d, 0x2018, 0x2019, 0x201c, 0x201d, 0x2022, 0x2013, 0x2014, 0x02dc, 0x2122, 0x0161, 0x203a,
+	0x0153, 0x017e, 0x0178
+]);
+const ASCII_FALLBACK: Record<string, string> = { '→': '->', '←': '<-' };
+function winAnsi(s: string): string {
+	let out = '';
+	for (const ch of s) {
+		const cp = ch.codePointAt(0) ?? 0;
+		if ((cp >= 0x20 && cp <= 0x7e) || (cp >= 0xa0 && cp <= 0xff) || CP1252_EXTRAS.has(cp)) {
+			out += ch;
+		} else {
+			out += ASCII_FALLBACK[ch] ?? '?';
+		}
+	}
+	return out;
+}
+
 export async function renderInvoicePdf(
 	input: RenderInvoiceInput,
 	correlationId: string
@@ -46,13 +71,34 @@ export async function renderInvoicePdf(
 		lineCount: lines.length
 	});
 
-	const money = (minor: number): string =>
-		new Intl.NumberFormat(invoice.invoiceLocale, {
+	// Build the currency formatter once. A bad snapshotted currency/locale (Intl
+	// throws RangeError) must not crash the render — fall back to a plain number.
+	let numberFormat: Intl.NumberFormat | null = null;
+	try {
+		numberFormat = new Intl.NumberFormat(invoice.invoiceLocale, {
 			style: 'currency',
 			currency: invoice.currencyCode,
 			minimumFractionDigits: invoice.currencyDecimals,
 			maximumFractionDigits: invoice.currencyDecimals
-		}).format(minor / 10 ** invoice.currencyDecimals);
+		});
+	} catch (err) {
+		log.warn({
+			event: 'pdf.invoice.currencyFormat.fallback',
+			correlationId,
+			entityType: 'invoice',
+			entityId: invoice.id,
+			currencyCode: invoice.currencyCode,
+			invoiceLocale: invoice.invoiceLocale,
+			reason: (err as Error).message
+		});
+	}
+	const decimals = Math.max(0, Math.min(invoice.currencyDecimals, 8));
+	const money = (minor: number): string => {
+		const value = minor / 10 ** invoice.currencyDecimals;
+		return numberFormat
+			? numberFormat.format(value)
+			: `${value.toFixed(decimals)} ${invoice.currencyCode}`;
+	};
 
 	const issueDate = invoice.finalizedAt ? localDateOf(invoice.finalizedAt) : '';
 	const dueDate = issueDate ? addDays(issueDate, invoice.paymentTermsDays) : '';
@@ -72,7 +118,7 @@ export async function renderInvoicePdf(
 		f: PDFFont = font,
 		color = INK
 	): void => {
-		page.drawText(s, { x, y: yPos, size, font: f, color });
+		page.drawText(winAnsi(s), { x, y: yPos, size, font: f, color });
 	};
 
 	// Right-aligned text ending at `right`.
@@ -84,8 +130,9 @@ export async function renderInvoicePdf(
 		f: PDFFont = font,
 		color = INK
 	): void => {
-		const w = f.widthOfTextAtSize(s, size);
-		page.drawText(s, { x: right - w, y: yPos, size, font: f, color });
+		const t = winAnsi(s);
+		const w = f.widthOfTextAtSize(t, size);
+		page.drawText(t, { x: right - w, y: yPos, size, font: f, color });
 	};
 
 	const rule = (yPos: number, p: PDFPage = page): void => {

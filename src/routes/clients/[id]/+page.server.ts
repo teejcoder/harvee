@@ -65,9 +65,23 @@ export const actions: Actions = {
 		const form = await request.formData();
 		const name = String(form.get('name') ?? '').trim();
 		const rateInput = Number(form.get('hourlyRate'));
-		if (name.length === 0) return fail(400, { error: 'Name is required' });
-		if (!Number.isFinite(rateInput) || rateInput < 0)
-			return fail(400, { error: 'Hourly rate must be a non-negative number' });
+		let projReason: string | null = null;
+		if (name.length === 0) projReason = 'empty_name';
+		else if (!Number.isFinite(rateInput) || rateInput < 0) projReason = 'invalid_hourly_rate';
+		if (projReason) {
+			log.warn({
+				event: 'routes.projects.create.validation.rejected',
+				correlationId,
+				entityType: 'project',
+				reason: projReason
+			});
+			return fail(400, {
+				error:
+					projReason === 'empty_name'
+						? 'Name is required'
+						: 'Hourly rate must be a non-negative number'
+			});
+		}
 
 		// Rate is entered in whole units (e.g. dollars); store as minor units.
 		const hourlyRate = Math.round(rateInput * 100);
@@ -150,8 +164,23 @@ export const actions: Actions = {
 		const form = await request.formData();
 		const startDate = String(form.get('startDate') ?? '');
 		const endDate = String(form.get('endDate') ?? '');
-		if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate))
-			return fail(400, { error: 'Both dates must be YYYY-MM-DD' });
+		const datesWellFormed =
+			/^\d{4}-\d{2}-\d{2}$/.test(startDate) && /^\d{4}-\d{2}-\d{2}$/.test(endDate);
+		if (!datesWellFormed || startDate > endDate) {
+			log.warn({
+				event: 'routes.invoices.generate.validation.rejected',
+				correlationId,
+				entityType: 'invoice',
+				reason: datesWellFormed ? 'start_after_end' : 'malformed_date',
+				startDate,
+				endDate
+			});
+			return fail(400, {
+				error: datesWellFormed
+					? 'Start date must be on or before end date'
+					: 'Both dates must be YYYY-MM-DD'
+			});
+		}
 
 		try {
 			const invoice = generateDraftInvoice(

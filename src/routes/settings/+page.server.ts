@@ -44,6 +44,32 @@ export const actions: Actions = {
 			invoiceLocale: String(form.get('invoiceLocale') ?? '').trim()
 		};
 
+		// Reject config that would later throw an Intl RangeError on every invoice
+		// render/export (a persistent denial of invoicing). currencyCode must be a
+		// 3-letter alpha code; invoiceLocale must be a well-formed BCP-47 tag.
+		const currencyOk = /^[A-Z]{3}$/.test(args.currencyCode);
+		let localeOk = true;
+		try {
+			new Intl.NumberFormat(args.invoiceLocale, {
+				style: 'currency',
+				currency: currencyOk ? args.currencyCode : 'USD'
+			});
+		} catch {
+			localeOk = false;
+		}
+		if (!currencyOk || !localeOk) {
+			log.warn({
+				event: 'routes.settings.update.validation.rejected',
+				correlationId,
+				entityType: 'settings',
+				entityId: '1',
+				reason: !currencyOk ? 'invalid_currency_code' : 'invalid_locale',
+				currencyCode: args.currencyCode,
+				invoiceLocale: args.invoiceLocale
+			});
+			return fail(400, { error: 'Invalid currency code or locale' });
+		}
+
 		try {
 			const updated = updateSettings(getDb(), args, correlationId);
 			return { success: true, settings: updated };

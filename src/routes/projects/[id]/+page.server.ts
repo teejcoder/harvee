@@ -63,7 +63,15 @@ export const actions: Actions = {
 		const form = await request.formData();
 		const name = String(form.get('name') ?? '').trim();
 		const description = String(form.get('description') ?? '').trim();
-		if (name.length === 0) return fail(400, { error: 'Name is required' });
+		if (name.length === 0) {
+			log.warn({
+				event: 'routes.tasks.create.validation.rejected',
+				correlationId,
+				entityType: 'task',
+				reason: 'empty_name'
+			});
+			return fail(400, { error: 'Name is required' });
+		}
 		return handleTransition(
 			() => {
 				const task = createTask(
@@ -85,8 +93,21 @@ export const actions: Actions = {
 		const taskId = String(form.get('taskId') ?? '');
 		const name = String(form.get('name') ?? '').trim();
 		const description = String(form.get('description') ?? '').trim();
-		if (!taskId) return fail(400, { error: 'taskId required' });
-		if (name.length === 0) return fail(400, { error: 'Name is required' });
+		let updReason: string | null = null;
+		if (!taskId) updReason = 'missing_task_id';
+		else if (name.length === 0) updReason = 'empty_name';
+		if (updReason) {
+			log.warn({
+				event: 'routes.tasks.update.validation.rejected',
+				correlationId,
+				entityType: 'task',
+				entityId: taskId || undefined,
+				reason: updReason
+			});
+			return fail(400, {
+				error: updReason === 'missing_task_id' ? 'taskId required' : 'Name is required'
+			});
+		}
 		return handleTransition(
 			() => {
 				updateTask(getDb(), { id: taskId, name, description }, correlationId);

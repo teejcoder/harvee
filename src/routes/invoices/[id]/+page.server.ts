@@ -45,7 +45,16 @@ export const actions: Actions = {
 		const form = await request.formData();
 		const description = String(form.get('description') ?? '').trim() || 'Discount';
 		const amountInput = Number(form.get('amount'));
-		if (!Number.isFinite(amountInput)) return fail(400, { error: 'Amount must be a number' });
+		if (!Number.isFinite(amountInput)) {
+			log.warn({
+				event: 'routes.invoices.addDiscount.validation.rejected',
+				correlationId,
+				entityType: 'invoice',
+				entityId: params.id,
+				reason: 'amount_not_finite'
+			});
+			return fail(400, { error: 'Amount must be a number' });
+		}
 		// Positive input from the user represents the discount magnitude; store as negative minor units.
 		const amount = -Math.round(Math.abs(amountInput) * 100);
 		try {
@@ -64,12 +73,21 @@ export const actions: Actions = {
 		const description = String(form.get('description') ?? '').trim();
 		const hours = Number(form.get('hours'));
 		const rateInput = Number(form.get('rate'));
-		if (!lineId) return fail(400, { error: 'lineId required' });
-		if (description.length === 0) return fail(400, { error: 'Description is required' });
-		if (!Number.isFinite(hours) || hours <= 0)
-			return fail(400, { error: 'Hours must be a positive number' });
-		if (!Number.isFinite(rateInput) || rateInput <= 0)
-			return fail(400, { error: 'Rate must be a positive number' });
+		let reason: string | null = null;
+		if (!lineId) reason = 'missing_line_id';
+		else if (description.length === 0) reason = 'empty_description';
+		else if (!Number.isFinite(hours) || hours <= 0) reason = 'non_positive_hours';
+		else if (!Number.isFinite(rateInput) || rateInput <= 0) reason = 'non_positive_rate';
+		if (reason) {
+			log.warn({
+				event: 'routes.invoices.updateLine.validation.rejected',
+				correlationId,
+				entityType: 'invoice',
+				entityId: params.id,
+				reason
+			});
+			return fail(400, { error: `Invalid line edit (${reason})` });
+		}
 		// Rate is entered in major currency units; store as minor units (matches addDiscount's *100).
 		const rate = Math.round(rateInput * 100);
 		try {
