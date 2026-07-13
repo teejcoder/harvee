@@ -31,6 +31,23 @@ export const load: LayoutServerLoad = () => {
 		)
 		.all() as TaskOption[];
 
+	// Recently-used active tasks — for one-click restart chips in the timer bar.
+	const recentTasks = db
+		.prepare(
+			`SELECT t.id AS id, t.name AS name, p.name AS projectName, c.name AS clientName
+			 FROM time_entry_segments s
+			 JOIN time_entries e ON s.entry_id = e.id
+			 JOIN tasks t ON e.task_id = t.id
+			 JOIN projects p ON t.project_id = p.id
+			 JOIN clients c ON p.client_id = c.id
+			 WHERE t.archived_at IS NULL AND p.archived_at IS NULL AND c.archived_at IS NULL
+			   AND e.state != 'entry.discarded'
+			 GROUP BY t.id
+			 ORDER BY MAX(s.started_at) DESC
+			 LIMIT 5`
+		)
+		.all() as TaskOption[];
+
 	const running = db
 		.prepare(
 			`SELECT
@@ -51,5 +68,5 @@ export const load: LayoutServerLoad = () => {
 		)
 		.get() as RunningEntryView | undefined;
 
-	return { activeTasks, running: running ?? null, today, todayHours };
+	return { activeTasks, recentTasks, running: running ?? null, today, todayHours };
 };

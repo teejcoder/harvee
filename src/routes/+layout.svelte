@@ -77,6 +77,7 @@
 
 <TimerWidget
 	activeTasks={data.activeTasks}
+	recentTasks={data.recentTasks}
 	running={data.running}
 	todayHours={data.todayHours}
 	{formError}
