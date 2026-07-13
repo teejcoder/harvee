@@ -2,30 +2,30 @@
 	import { resolve } from '$app/paths';
 	import type { PageProps } from './$types';
 
-	// `data` inherits the layout load (activeTasks, today).
+	// `data` inherits the layout load (activeTasks, today, running) plus this
+	// page's load (todayHours, weekHours, recent).
 	let { data }: PageProps = $props();
 
-	const cards = $derived([
-		{
-			label: 'Clients',
-			href: resolve('/clients'),
-			blurb: 'Set up clients, projects, and tasks — then bill them.'
-		},
-		{
-			label: 'Calendar',
-			href: resolve('/calendar/day/[date]', { date: data.today }),
-			blurb: 'Review tracked time by day, week, or month.'
-		},
-		{
-			label: 'Settings',
-			href: resolve('/settings'),
-			blurb: 'Your sender details, currency, and payment terms.'
-		}
-	]);
+	function fmtHours(hours: number): string {
+		const totalMin = Math.round(hours * 60);
+		const h = Math.floor(totalMin / 60);
+		const m = totalMin % 60;
+		return h > 0 ? `${h}h ${m}m` : `${m}m`;
+	}
+	function fmtSec(sec: number): string {
+		return fmtHours(sec / 3600);
+	}
+
+	const stateBadge: Record<string, string> = {
+		'entry.running': 'bg-emerald-100 text-emerald-800',
+		'entry.stopped': 'bg-gray-100 text-gray-700',
+		'entry.editing': 'bg-amber-100 text-amber-800',
+		'entry.locked': 'bg-blue-100 text-blue-800'
+	};
 </script>
 
-<div class="mx-auto max-w-5xl p-6">
-	<h1 class="mb-1 text-2xl font-semibold">harvest-clone</h1>
+<div class="mx-auto max-w-3xl p-6">
+	<h1 class="mb-1 text-2xl font-semibold">harvee</h1>
 	<p class="mb-6 text-sm text-gray-600">
 		Track billable hours and turn them into invoices. Pick a task in the timer bar above to start
 		the clock.
@@ -39,15 +39,55 @@
 		</div>
 	{/if}
 
-	<div class="grid gap-4 sm:grid-cols-3">
-		{#each cards as card (card.href)}
-			<a
-				href={card.href}
-				class="block rounded border border-gray-200 p-4 transition hover:border-gray-300 hover:bg-gray-50"
-			>
-				<div class="mb-1 font-medium text-gray-900">{card.label}</div>
-				<div class="text-sm text-gray-600">{card.blurb}</div>
-			</a>
-		{/each}
+	<!-- Totals -->
+	<div class="mb-8 grid grid-cols-2 gap-4">
+		<div class="rounded border border-gray-200 p-4">
+			<div class="text-xs tracking-wide text-gray-500 uppercase">Today</div>
+			<div class="mt-1 font-mono text-2xl">{fmtHours(data.todayHours)}</div>
+		</div>
+		<a
+			href={resolve('/calendar/week/[date]', { date: data.today })}
+			class="rounded border border-gray-200 p-4 hover:bg-gray-50"
+		>
+			<div class="text-xs tracking-wide text-gray-500 uppercase">This week</div>
+			<div class="mt-1 font-mono text-2xl">{fmtHours(data.weekHours)}</div>
+		</a>
 	</div>
+
+	<!-- Recent activity -->
+	<div class="mb-3 flex items-center justify-between">
+		<h2 class="text-lg font-medium">Recent activity</h2>
+		<a
+			href={resolve('/calendar/day/[date]', { date: data.today })}
+			class="text-sm text-blue-700 hover:underline">Calendar →</a
+		>
+	</div>
+
+	{#if data.recent.length === 0}
+		<p class="text-sm text-gray-500">No time tracked yet.</p>
+	{:else}
+		<ul class="divide-y divide-gray-200 rounded border border-gray-200">
+			{#each data.recent as e (e.id)}
+				<li>
+					<a
+						href={resolve('/entries/[id]', { id: e.id })}
+						class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 hover:bg-gray-50"
+					>
+						<span
+							class="rounded px-2 py-0.5 text-xs font-medium {stateBadge[e.state] ?? 'bg-gray-100'}"
+						>
+							{e.state.replace('entry.', '')}
+						</span>
+						<div class="min-w-0 flex-1">
+							<div class="truncate text-sm font-medium text-gray-900">{e.taskName}</div>
+							<div class="truncate text-xs text-gray-500">
+								{e.clientName} · {e.projectName}{e.notes ? ` — ${e.notes}` : ''}
+							</div>
+						</div>
+						<span class="ml-auto font-mono text-sm">{fmtSec(e.durationSec)}</span>
+					</a>
+				</li>
+			{/each}
+		</ul>
+	{/if}
 </div>

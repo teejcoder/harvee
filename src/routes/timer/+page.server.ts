@@ -52,7 +52,6 @@ export const actions: Actions = {
 
 		try {
 			stopTimer(getDb(), entryId, correlationId);
-			return { success: true };
 		} catch (err) {
 			log.error({
 				event: 'routes.timer.stop.failed',
@@ -61,5 +60,8 @@ export const actions: Actions = {
 			});
 			return toActionResult(err);
 		}
+		// Land on the just-stopped entry so notes/segments can be edited immediately —
+		// previously the entry you just created was the hardest thing to navigate to.
+		throw redirect(303, `/entries/${entryId}`);
 	}
 };

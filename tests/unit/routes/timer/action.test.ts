@@ -104,10 +104,17 @@ describe('POST /timer ?/stop (Step 4.2)', () => {
 			entryId: string;
 		};
 
-		const stopped = (await actions.stop(
-			makeEvent('/timer?/stop', { entryId: started.entryId }) as never
-		)) as { success: boolean };
-		expect(stopped.success).toBe(true);
+		// Stop now redirects (303) to the just-stopped entry so it can be edited.
+		let redirect: { status: number; location: string } | undefined;
+		try {
+			await actions.stop(makeEvent('/timer?/stop', { entryId: started.entryId }) as never);
+		} catch (err) {
+			if (err && typeof err === 'object' && 'status' in err && 'location' in err) {
+				redirect = err as { status: number; location: string };
+			}
+		}
+		expect(redirect?.status).toBe(303);
+		expect(redirect?.location).toBe(`/entries/${started.entryId}`);
 
 		const entry = getDb()
 			.prepare(`SELECT state FROM time_entries WHERE id = ?`)

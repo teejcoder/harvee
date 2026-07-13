@@ -107,3 +107,47 @@ export function getInvoice(db: Database, id: string): Invoice | undefined {
 	const row = prep(db, `SELECT * FROM invoices WHERE id = ?`).get(id);
 	return row ? rowToCamel<Invoice>(row) : undefined;
 }
+
+export interface InvoiceListItem {
+	id: string;
+	clientId: string;
+	clientName: string;
+	state: InvoiceState;
+	invoiceNumber: string | null;
+	startDate: string;
+	endDate: string;
+	total: number;
+	currencyCode: string;
+	currencyDecimals: number;
+	invoiceLocale: string;
+	finalizedAt: string | null;
+	createdAt: string;
+}
+
+/** List invoices (newest first) with client name joined; optionally scoped to one client. */
+export function listInvoices(db: Database, opts: { clientId?: string } = {}): InvoiceListItem[] {
+	log.debug({ event: 'db.query.listInvoices', clientId: opts.clientId });
+	const where = opts.clientId ? 'WHERE i.client_id = ?' : '';
+	const stmt = prep(
+		db,
+		`SELECT
+			i.id AS id,
+			i.client_id AS clientId,
+			c.name AS clientName,
+			i.state AS state,
+			i.invoice_number AS invoiceNumber,
+			i.start_date AS startDate,
+			i.end_date AS endDate,
+			i.total AS total,
+			i.currency_code AS currencyCode,
+			i.currency_decimals AS currencyDecimals,
+			i.invoice_locale AS invoiceLocale,
+			i.finalized_at AS finalizedAt,
+			i.created_at AS createdAt
+		 FROM invoices i
+		 JOIN clients c ON i.client_id = c.id
+		 ${where}
+		 ORDER BY i.created_at DESC`
+	);
+	return (opts.clientId ? stmt.all(opts.clientId) : stmt.all()) as InvoiceListItem[];
+}

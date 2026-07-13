@@ -21,6 +21,7 @@ A dated, one-line map of the build. Each bullet is a completed phase; the detail
 
 #### Detail
 
+- UX Tier 1 — navigation dead-ends fixed. New **`/invoices` list** route (all invoices, filterable by state) + an **Invoices** nav item — finalized invoices were previously unreachable after navigating away (only `/invoices/[id]` by URL). `/clients/[id]` now lists that client's invoices. The home page `/` is now a **dashboard**: today + this-week totals and a recent-activity list linking straight to each entry. **Stop** now redirects to the just-stopped entry (`/entries/[id]`) so notes/segments can be edited immediately — previously the entry you just created was the hardest thing to reach. New shared `src/lib/money.ts` (`formatMoney` / `toMinorUnits` / `fromMinorUnits`, decimal-aware with an Intl fallback) and a reusable `InvoiceList` component; new `listInvoices` query.
 - Initial repo skeleton: SvelteKit 2 + Svelte 5 (runes) + TypeScript strict + Tailwind v4 on Node 22, with Prettier, ESLint, and Vitest configured.
 - Vitest test workspaces: `unit` (Node) and `component` (jsdom, `@testing-library/svelte`). Test root at `tests/{unit,component,e2e}/`.
 - Playwright end-to-end test harness (`playwright.config.ts`), booting against `pnpm preview`.

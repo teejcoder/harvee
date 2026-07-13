@@ -1,6 +1,7 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { getDb } from '$lib/db';
 import { getClient } from '$lib/db/queries/clients';
+import { listInvoices } from '$lib/db/queries/invoices';
 import { log } from '$lib/log';
 import { archiveClient, unarchiveClient } from '$lib/state/client';
 import { archiveProject, createProject, unarchiveProject } from '$lib/state/project';
@@ -54,7 +55,9 @@ export const load: PageServerLoad = ({ params }) => {
 		)
 		.all(params.id) as ProjectRow[];
 
-	return { client, projects };
+	const invoices = listInvoices(db, { clientId: params.id });
+
+	return { client, projects, invoices };
 };
 
 export const actions: Actions = {

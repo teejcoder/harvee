@@ -11,6 +11,7 @@
 	const navLinks = $derived([
 		{ label: 'Home', href: resolve('/'), match: '/' },
 		{ label: 'Clients', href: resolve('/clients'), match: '/clients' },
+		{ label: 'Invoices', href: resolve('/invoices'), match: '/invoices' },
 		{
 			label: 'Calendar',
 			href: resolve('/calendar/day/[date]', { date: data.today }),

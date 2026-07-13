@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import InvoiceList from '$lib/components/InvoiceList.svelte';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -65,6 +66,15 @@
 			</button>
 		</form>
 	</section>
+
+	<div class="mt-8 mb-3 flex items-center justify-between">
+		<h2 class="text-lg font-medium">Invoices</h2>
+		{#if data.invoices.length > 0}
+			<a href={resolve('/invoices')} class="text-sm text-blue-700 hover:underline">All invoices →</a
+			>
+		{/if}
+	</div>
+	<InvoiceList invoices={data.invoices} showClient={false} />
 
 	<h2 class="mt-8 mb-3 text-lg font-medium">Projects</h2>
 
