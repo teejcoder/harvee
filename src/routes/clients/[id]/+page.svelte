@@ -2,9 +2,35 @@
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
 	import InvoiceList from '$lib/components/InvoiceList.svelte';
+	import { formatMoney } from '$lib/money';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
+
+	const rate = (minor: number): string =>
+		formatMoney(minor, data.currency.code, data.currency.decimals, data.currency.locale);
+
+	// Invoice-range presets. Uses the browser's local date (matches the app's
+	// system-local day convention on a single machine).
+	let startDate = $state('');
+	let endDate = $state('');
+	const pad = (n: number): string => String(n).padStart(2, '0');
+	const iso = (d: Date): string =>
+		`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+	function preset(kind: 'thisMonth' | 'lastMonth' | 'last7'): void {
+		const now = new Date();
+		if (kind === 'thisMonth') {
+			startDate = iso(new Date(now.getFullYear(), now.getMonth(), 1));
+			endDate = iso(now);
+		} else if (kind === 'lastMonth') {
+			startDate = iso(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+			endDate = iso(new Date(now.getFullYear(), now.getMonth(), 0));
+		} else {
+			// Constructor with day arithmetic (rolls over months) — no Date mutation.
+			startDate = iso(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6));
+			endDate = iso(now);
+		}
+	}
 </script>
 
 <div class="mx-auto max-w-3xl p-6">
@@ -39,7 +65,28 @@
 	{/if}
 
 	<section class="mt-6 rounded border border-gray-200 p-4">
-		<h2 class="mb-2 text-sm font-medium text-gray-700">Generate invoice</h2>
+		<h2 class="mb-1 text-sm font-medium text-gray-700">Generate invoice</h2>
+		<p class="mb-3 text-xs text-gray-500">
+			{#if data.unbilled.entries > 0}
+				{data.unbilled.hours.toFixed(2)}h of unbilled time ready to bill ({data.unbilled.entries}
+				{data.unbilled.entries === 1 ? 'entry' : 'entries'}).
+			{:else}
+				No unbilled time for this client yet.
+			{/if}
+		</p>
+
+		<div class="mb-3 flex flex-wrap gap-1">
+			{#each [['thisMonth', 'This month'], ['lastMonth', 'Last month'], ['last7', 'Last 7 days']] as [kind, label] (kind)}
+				<button
+					type="button"
+					onclick={() => preset(kind as 'thisMonth' | 'lastMonth' | 'last7')}
+					class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50"
+				>
+					{label}
+				</button>
+			{/each}
+		</div>
+
 		<form
 			method="post"
 			use:enhance
@@ -51,6 +98,7 @@
 				<input
 					name="startDate"
 					type="date"
+					bind:value={startDate}
 					class="rounded border border-gray-300 px-3 py-2"
 					required
 				/>
@@ -60,6 +108,7 @@
 				<input
 					name="endDate"
 					type="date"
+					bind:value={endDate}
 					class="rounded border border-gray-300 px-3 py-2"
 					required
 				/>
@@ -139,7 +188,7 @@
 						{project.name}
 					</a>
 					<span class="flex items-center gap-3 text-sm text-gray-600">
-						<span>{(project.hourlyRate / 100).toFixed(2)}/hr</span>
+						<span>{rate(project.hourlyRate)}/hr</span>
 						{#if project.archivedAt}
 							<form method="post" use:enhance action="?/unarchiveProject">
 								<input type="hidden" name="projectId" value={project.id} />

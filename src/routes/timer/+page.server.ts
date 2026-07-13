@@ -26,10 +26,11 @@ export const actions: Actions = {
 
 		const form = await request.formData();
 		const taskId = String(form.get('taskId') ?? '');
+		const notes = String(form.get('notes') ?? '').trim();
 		if (!taskId) return fail(400, { error: 'taskId required' });
 
 		try {
-			const entry = pickTask(getDb(), { taskId }, correlationId);
+			const entry = pickTask(getDb(), { taskId, notes: notes || undefined }, correlationId);
 			startTimer(getDb(), entry.id, correlationId);
 			return { success: true, entryId: entry.id };
 		} catch (err) {

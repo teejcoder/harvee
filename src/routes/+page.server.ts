@@ -1,7 +1,7 @@
 import { getDb } from '$lib/db';
 import { segmentsInRange } from '$lib/calendar';
 import { log } from '$lib/log';
-import { localDateOf, localDayBounds, localWeekBounds, nowUtcIso } from '$lib/time';
+import { localDateOf, localWeekBounds, nowUtcIso } from '$lib/time';
 import type { PageServerLoad } from './$types';
 
 export interface RecentEntry {
@@ -19,8 +19,8 @@ export const load: PageServerLoad = () => {
 	const db = getDb();
 	log.debug({ event: 'routes.home.load' });
 
+	// todayHours comes from the layout load (shared with the timer widget).
 	const today = localDateOf(nowUtcIso());
-	const day = localDayBounds(today);
 	const week = localWeekBounds(today);
 	const hours = (start: string, end: string): number =>
 		segmentsInRange(db, start, end).reduce((sum, s) => sum + s.durationMs, 0) / 3_600_000;
@@ -54,7 +54,6 @@ export const load: PageServerLoad = () => {
 		.all() as RecentEntry[];
 
 	return {
-		todayHours: hours(day.startUtcIso, day.endUtcIso),
 		weekHours: hours(week.startUtcIso, week.endUtcIso),
 		recent
 	};

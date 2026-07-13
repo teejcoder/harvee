@@ -21,6 +21,7 @@ A dated, one-line map of the build. Each bullet is a completed phase; the detail
 
 #### Detail
 
+- UX Tier 3 — invoice generation gets **date presets** (This month / Last month / Last 7 days) that fill the range, and an **unbilled-time hint** ("N.NNh of unbilled time ready to bill") on the client page so you know there's something to invoice before generating. The timer bar now shows a running **"Today" total** and an optional **notes field at start**. Project/line rates render with the currency symbol.
 - UX Tier 1 — navigation dead-ends fixed. New **`/invoices` list** route (all invoices, filterable by state) + an **Invoices** nav item — finalized invoices were previously unreachable after navigating away (only `/invoices/[id]` by URL). `/clients/[id]` now lists that client's invoices. The home page `/` is now a **dashboard**: today + this-week totals and a recent-activity list linking straight to each entry. **Stop** now redirects to the just-stopped entry (`/entries/[id]`) so notes/segments can be edited immediately — previously the entry you just created was the hardest thing to reach. New shared `src/lib/money.ts` (`formatMoney` / `toMinorUnits` / `fromMinorUnits`, decimal-aware with an Intl fallback) and a reusable `InvoiceList` component; new `listInvoices` query.
 - Initial repo skeleton: SvelteKit 2 + Svelte 5 (runes) + TypeScript strict + Tailwind v4 on Node 22, with Prettier, ESLint, and Vitest configured.
 - Vitest test workspaces: `unit` (Node) and `component` (jsdom, `@testing-library/svelte`). Test root at `tests/{unit,component,e2e}/`.
@@ -69,6 +70,7 @@ A dated, one-line map of the build. Each bullet is a completed phase; the detail
 
 ### Fixed
 
+- **Multi-currency money handling was hardcoded to 2 decimals** — a silent correctness bug in the core billing path. Project rate entry, discount entry, invoice line-rate entry, and the corresponding displays all assumed `× 100` / `÷ 100`, so a 0-decimal currency (JPY) or 3-decimal currency stored and rendered amounts off by a factor of 10^(2−decimals) (a rate of ¥1,000 became ¥100,000). All money entry/display now routes through the decimal-aware `toMinorUnits` / `fromMinorUnits` / `formatMoney` helpers in `src/lib/money.ts`, using the configured (or invoice-snapshotted) `currencyDecimals`. Money inputs show the currency code and use a decimals-appropriate `step`. Covered by 7 new Vitest cases.
 - Invoice PDFs now render the sender's **payment instructions**. `settings.payment_instructions` was captured by the schema and the `/settings` form and threaded through the `Settings` type, but the `pdf-lib` renderer never printed it — so the field `.memory/domain-model.md` §4 says is "rendered on the PDF" was silently dropped. `src/lib/pdf/invoice.ts` now draws a multiline "Payment instructions" block between the totals and the footer (skipped when the field is blank), matching how the sender address is handled.
 - `CLAUDE.md` §4.4 was inconsistent with `.memory/conventions.md` §5 on correlation IDs (said "always"; conventions says "state-changing chains only"). Corrected `CLAUDE.md` to align with the earlier decision.
 

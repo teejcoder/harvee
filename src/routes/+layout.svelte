@@ -75,7 +75,12 @@
 	</div>
 </nav>
 
-<TimerWidget activeTasks={data.activeTasks} running={data.running} {formError} />
+<TimerWidget
+	activeTasks={data.activeTasks}
+	running={data.running}
+	todayHours={data.todayHours}
+	{formError}
+/>
 
 {@render children()}
 

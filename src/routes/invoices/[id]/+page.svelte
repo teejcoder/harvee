@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
-	import { formatMoney } from '$lib/money';
+	import { formatMoney, fromMinorUnits } from '$lib/money';
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import type { PageProps } from './$types';
 
@@ -134,13 +134,15 @@
 								/>
 							</label>
 							<label>
-								<span class="block text-xs text-gray-600">Rate</span>
+								<span class="block text-xs text-gray-600">Rate ({data.invoice.currencyCode})</span>
 								<input
 									name="rate"
 									type="number"
-									min="0.01"
-									step="0.01"
-									value={((line.rate ?? 0) / 100).toFixed(2)}
+									min="0"
+									step={(10 ** -data.invoice.currencyDecimals).toString()}
+									value={fromMinorUnits(line.rate ?? 0, data.invoice.currencyDecimals).toFixed(
+										data.invoice.currencyDecimals
+									)}
 									class="w-28 rounded border border-gray-300 px-2 py-1"
 									required
 								/>
@@ -184,12 +186,12 @@
 						/>
 					</label>
 					<label>
-						<span class="block text-xs text-gray-600">Amount (positive)</span>
+						<span class="block text-xs text-gray-600">Amount ({data.invoice.currencyCode})</span>
 						<input
 							name="amount"
 							type="number"
-							min="0.01"
-							step="0.01"
+							min="0"
+							step={(10 ** -data.invoice.currencyDecimals).toString()}
 							class="w-32 rounded border border-gray-300 px-3 py-2"
 							required
 						/>

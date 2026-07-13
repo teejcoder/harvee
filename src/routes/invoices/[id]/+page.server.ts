@@ -3,6 +3,7 @@ import { getDb } from '$lib/db';
 import { getInvoice } from '$lib/db/queries/invoices';
 import { listInvoiceLines } from '$lib/db/queries/lineItems';
 import { log } from '$lib/log';
+import { toMinorUnits } from '$lib/money';
 import {
 	addDiscountLine,
 	deleteDraft,
@@ -55,8 +56,10 @@ export const actions: Actions = {
 			});
 			return fail(400, { error: 'Amount must be a number' });
 		}
-		// Positive input from the user represents the discount magnitude; store as negative minor units.
-		const amount = -Math.round(Math.abs(amountInput) * 100);
+		// Positive input represents the discount magnitude; store as negative minor
+		// units in the invoice's own currency precision (JPY=0dp, USD=2dp, …).
+		const decimals = getInvoice(getDb(), params.id)?.currencyDecimals ?? 2;
+		const amount = -Math.abs(toMinorUnits(amountInput, decimals));
 		try {
 			addDiscountLine(getDb(), { invoiceId: params.id, description, amount }, correlationId);
 			return { success: true };
@@ -88,8 +91,9 @@ export const actions: Actions = {
 			});
 			return fail(400, { error: `Invalid line edit (${reason})` });
 		}
-		// Rate is entered in major currency units; store as minor units (matches addDiscount's *100).
-		const rate = Math.round(rateInput * 100);
+		// Rate is entered in major units; store as minor units at the invoice's precision.
+		const decimals = getInvoice(getDb(), params.id)?.currencyDecimals ?? 2;
+		const rate = toMinorUnits(rateInput, decimals);
 		try {
 			updateTaskLine(
 				getDb(),

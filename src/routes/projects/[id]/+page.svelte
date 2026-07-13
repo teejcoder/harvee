@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
+	import { formatMoney } from '$lib/money';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -37,7 +38,12 @@
 		{/if}
 	</div>
 	<p class="mb-4 text-sm text-gray-600">
-		{(data.project.hourlyRate / 100).toFixed(2)}/hr
+		{formatMoney(
+			data.project.hourlyRate,
+			data.currency.code,
+			data.currency.decimals,
+			data.currency.locale
+		)}/hr
 		{#if data.project.archivedAt}<span class="ml-2 text-xs text-gray-500">archived</span>{/if}
 	</p>
 

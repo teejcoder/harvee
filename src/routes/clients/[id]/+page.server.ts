@@ -2,7 +2,9 @@ import { error, fail, redirect } from '@sveltejs/kit';
 import { getDb } from '$lib/db';
 import { getClient } from '$lib/db/queries/clients';
 import { listInvoices } from '$lib/db/queries/invoices';
+import { getSettings } from '$lib/db/queries/settings';
 import { log } from '$lib/log';
+import { toMinorUnits } from '$lib/money';
 import { archiveClient, unarchiveClient } from '$lib/state/client';
 import { archiveProject, createProject, unarchiveProject } from '$lib/state/project';
 import { generateDraftInvoice } from '$lib/state/invoice';
@@ -56,8 +58,38 @@ export const load: PageServerLoad = ({ params }) => {
 		.all(params.id) as ProjectRow[];
 
 	const invoices = listInvoices(db, { clientId: params.id });
+	const settings = getSettings(db);
 
-	return { client, projects, invoices };
+	// Unbilled time for this client — stopped entries not yet locked onto an invoice.
+	// Gives the user a "here's what's billable" signal before generating.
+	const unbilled = db
+		.prepare(
+			`SELECT
+				COALESCE(SUM(
+					CASE WHEN s.stopped_at IS NOT NULL
+						THEN strftime('%s', s.stopped_at) - strftime('%s', s.started_at)
+						ELSE 0 END
+				), 0) AS sec,
+				COUNT(DISTINCT e.id) AS entries
+			 FROM time_entries e
+			 JOIN tasks t ON e.task_id = t.id
+			 JOIN projects p ON t.project_id = p.id
+			 LEFT JOIN time_entry_segments s ON s.entry_id = e.id
+			 WHERE p.client_id = ? AND e.state = 'entry.stopped'`
+		)
+		.get(params.id) as { sec: number; entries: number };
+
+	return {
+		client,
+		projects,
+		invoices,
+		unbilled: { hours: unbilled.sec / 3600, entries: unbilled.entries },
+		currency: {
+			code: settings.currencyCode,
+			decimals: settings.currencyDecimals,
+			locale: settings.invoiceLocale
+		}
+	};
 };
 
 export const actions: Actions = {
@@ -86,8 +118,9 @@ export const actions: Actions = {
 			});
 		}
 
-		// Rate is entered in whole units (e.g. dollars); store as minor units.
-		const hourlyRate = Math.round(rateInput * 100);
+		// Rate is entered in major units; store as minor units at the configured
+		// currency's precision (USD→×100, JPY→×1).
+		const hourlyRate = toMinorUnits(rateInput, getSettings(getDb()).currencyDecimals);
 
 		return handleTransition(
 			() => {

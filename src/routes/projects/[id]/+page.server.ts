@@ -1,6 +1,7 @@
 import { error, fail } from '@sveltejs/kit';
 import { getDb } from '$lib/db';
 import { getProject } from '$lib/db/queries/projects';
+import { getSettings } from '$lib/db/queries/settings';
 import { log } from '$lib/log';
 import { archiveProject, unarchiveProject } from '$lib/state/project';
 import { archiveTask, createTask, unarchiveTask, updateTask } from '$lib/state/task';
@@ -53,7 +54,17 @@ export const load: PageServerLoad = ({ params }) => {
 		)
 		.all(params.id) as TaskRow[];
 
-	return { project, tasks };
+	const settings = getSettings(db);
+
+	return {
+		project,
+		tasks,
+		currency: {
+			code: settings.currencyCode,
+			decimals: settings.currencyDecimals,
+			locale: settings.invoiceLocale
+		}
+	};
 };
 
 export const actions: Actions = {

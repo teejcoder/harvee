@@ -1,5 +1,6 @@
 import { getDb } from '$lib/db';
-import { localDateOf, nowUtcIso } from '$lib/time';
+import { segmentsInRange } from '$lib/calendar';
+import { localDateOf, localDayBounds, nowUtcIso } from '$lib/time';
 import type { RunningEntryView, TaskOption } from '$lib/components/timer-types';
 import type { LayoutServerLoad } from './$types';
 
@@ -8,6 +9,10 @@ export const load: LayoutServerLoad = () => {
 
 	// Today's local date, used by the nav to link to the current day/month views.
 	const today = localDateOf(nowUtcIso());
+	const day = localDayBounds(today);
+	const todayHours =
+		segmentsInRange(db, day.startUtcIso, day.endUtcIso).reduce((s, seg) => s + seg.durationMs, 0) /
+		3_600_000;
 
 	const activeTasks = db
 		.prepare(
@@ -46,5 +51,5 @@ export const load: LayoutServerLoad = () => {
 		)
 		.get() as RunningEntryView | undefined;
 
-	return { activeTasks, running: running ?? null, today };
+	return { activeTasks, running: running ?? null, today, todayHours };
 };
