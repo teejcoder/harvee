@@ -4,6 +4,13 @@
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
+
+	let query = $state('');
+	const shown = $derived(
+		query.trim()
+			? data.clients.filter((c) => c.name.toLowerCase().includes(query.trim().toLowerCase()))
+			: data.clients
+	);
 </script>
 
 <div class="mx-auto max-w-3xl p-6">
@@ -38,8 +45,19 @@
 	{#if data.clients.length === 0}
 		<p class="text-gray-500">No clients yet. Add one above.</p>
 	{:else}
+		{#if data.clients.length > 5}
+			<input
+				type="search"
+				bind:value={query}
+				placeholder="Search clients…"
+				class="mb-3 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+			/>
+		{/if}
+		{#if shown.length === 0}
+			<p class="text-sm text-gray-500">No clients match “{query}”.</p>
+		{/if}
 		<ul class="divide-y divide-gray-200 rounded border border-gray-200">
-			{#each data.clients as client (client.id)}
+			{#each shown as client (client.id)}
 				<li class="flex items-center justify-between px-4 py-3">
 					<a
 						href={resolve('/clients/[id]', { id: client.id })}

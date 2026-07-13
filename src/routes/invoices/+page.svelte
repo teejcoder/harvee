@@ -6,9 +6,17 @@
 
 	const states = ['all', 'draft', 'finalized', 'exported', 'voided'] as const;
 	let filter = $state<(typeof states)[number]>('all');
+	let query = $state('');
 
 	const shown = $derived(
-		filter === 'all' ? data.invoices : data.invoices.filter((i) => i.state === `invoice.${filter}`)
+		data.invoices.filter((i) => {
+			if (filter !== 'all' && i.state !== `invoice.${filter}`) return false;
+			const q = query.trim().toLowerCase();
+			if (!q) return true;
+			return (
+				i.clientName.toLowerCase().includes(q) || (i.invoiceNumber ?? '').toLowerCase().includes(q)
+			);
+		})
 	);
 </script>
 
@@ -18,7 +26,7 @@
 		Every invoice you've generated. Create one from a client's page.
 	</p>
 
-	<div class="mb-4 flex flex-wrap gap-1">
+	<div class="mb-3 flex flex-wrap gap-1">
 		{#each states as s (s)}
 			<button
 				type="button"
@@ -31,6 +39,14 @@
 			</button>
 		{/each}
 	</div>
+	{#if data.invoices.length > 5}
+		<input
+			type="search"
+			bind:value={query}
+			placeholder="Search by number or client…"
+			class="mb-4 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+		/>
+	{/if}
 
 	<InvoiceList invoices={shown} showClient={true} />
 </div>

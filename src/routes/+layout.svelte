@@ -17,6 +17,7 @@
 			href: resolve('/calendar/day/[date]', { date: data.today }),
 			match: '/calendar'
 		},
+		{ label: 'Reports', href: resolve('/reports'), match: '/reports' },
 		{ label: 'Settings', href: resolve('/settings'), match: '/settings' }
 	]);
 
