@@ -36,7 +36,7 @@
 
 <nav class="w-full border-b border-gray-200 bg-gray-50">
 	<div class="mx-auto flex max-w-5xl items-center gap-1 px-4 py-2">
-		<a href={resolve('/')} class="mr-3 font-semibold text-gray-900">harvest</a>
+		<a href={resolve('/')} class="mr-3 font-semibold text-gray-900">harvee</a>
 		{#each navLinks as link (link.href)}
 			<a
 				href={link.href}
