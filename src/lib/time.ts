@@ -32,11 +32,38 @@ export function localDateOf(utcIso: IsoTs, tz: string = systemTz()): LocalDate {
 	return `${map.year}-${map.month}-${map.day}`;
 }
 
+// Format a UTC instant as a local 'YYYY-MM-DDTHH:mm:ss' string suitable as the
+// value of an <input type="datetime-local" step="1">, in the system-local tz.
+export function localDateTimeInputOf(utcIso: IsoTs, tz: string = systemTz()): string {
+	const parts = new Intl.DateTimeFormat('en-CA', {
+		timeZone: tz,
+		year: 'numeric',
+		month: '2-digit',
+		day: '2-digit',
+		hour: '2-digit',
+		minute: '2-digit',
+		second: '2-digit',
+		hour12: false
+	}).formatToParts(new Date(utcIso));
+	const m = partsMap(parts);
+	const hour = String(Number(m.hour) % 24).padStart(2, '0'); // Intl can emit '24' at midnight
+	return `${m.year}-${m.month}-${m.day}T${hour}:${m.minute}:${m.second}`;
+}
+
+// Parse a local 'YYYY-MM-DDTHH:mm[:ss]' wall-clock string (from a datetime-local
+// input) into a UTC ISO 8601 instant, interpreting it in the system-local tz.
+export function utcIsoFromLocalDateTime(local: string, tz: string = systemTz()): IsoTs {
+	const [datePart, timePart = '00:00'] = local.split('T');
+	const [y, mo, d] = datePart.split('-').map(Number);
+	const [h, mi, s] = timePart.split(':').map(Number);
+	return new Date(localWallToUtcMs(y, mo, d, h, mi, s || 0, tz)).toISOString();
+}
+
 export function localDayBounds(localDate: LocalDate, tz: string = systemTz()): Bounds {
 	const [y, m, d] = localDate.split('-').map(Number);
 	return {
-		startUtcIso: new Date(localWallToUtcMs(y, m, d, 0, 0, tz)).toISOString(),
-		endUtcIso: new Date(localWallToUtcMs(y, m, d + 1, 0, 0, tz)).toISOString()
+		startUtcIso: new Date(localWallToUtcMs(y, m, d, 0, 0, 0, tz)).toISOString(),
+		endUtcIso: new Date(localWallToUtcMs(y, m, d + 1, 0, 0, 0, tz)).toISOString()
 	};
 }
 
@@ -48,16 +75,16 @@ export function localWeekBounds(localDate: LocalDate, tz: string = systemTz()): 
 	const isoDay = jsDay === 0 ? 7 : jsDay; // 1=Mon..7=Sun
 	const mondayOffset = isoDay - 1;
 	return {
-		startUtcIso: new Date(localWallToUtcMs(y, m, d - mondayOffset, 0, 0, tz)).toISOString(),
-		endUtcIso: new Date(localWallToUtcMs(y, m, d - mondayOffset + 7, 0, 0, tz)).toISOString()
+		startUtcIso: new Date(localWallToUtcMs(y, m, d - mondayOffset, 0, 0, 0, tz)).toISOString(),
+		endUtcIso: new Date(localWallToUtcMs(y, m, d - mondayOffset + 7, 0, 0, 0, tz)).toISOString()
 	};
 }
 
 export function localMonthBounds(yyyyMm: LocalMonth, tz: string = systemTz()): Bounds {
 	const [y, m] = yyyyMm.split('-').map(Number);
 	return {
-		startUtcIso: new Date(localWallToUtcMs(y, m, 1, 0, 0, tz)).toISOString(),
-		endUtcIso: new Date(localWallToUtcMs(y, m + 1, 1, 0, 0, tz)).toISOString()
+		startUtcIso: new Date(localWallToUtcMs(y, m, 1, 0, 0, 0, tz)).toISOString(),
+		endUtcIso: new Date(localWallToUtcMs(y, m + 1, 1, 0, 0, 0, tz)).toISOString()
 	};
 }
 
@@ -71,9 +98,10 @@ function localWallToUtcMs(
 	d: number,
 	h: number,
 	mi: number,
+	s: number,
 	tz: string
 ): number {
-	const naive = Date.UTC(y, mo - 1, d, h, mi);
+	const naive = Date.UTC(y, mo - 1, d, h, mi, s);
 	const offset1 = tzOffsetMs(naive, tz);
 	const guess = naive - offset1;
 	const offset2 = tzOffsetMs(guess, tz);

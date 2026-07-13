@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import {
 	localDateOf,
+	localDateTimeInputOf,
 	localDayBounds,
 	localMonthBounds,
 	localWeekBounds,
-	nowUtcIso
+	nowUtcIso,
+	utcIsoFromLocalDateTime
 } from '../../../src/lib/time';
 
 const HOUR_MS = 3_600_000;
@@ -120,5 +122,37 @@ describe('rollover edge cases', () => {
 		const { startUtcIso, endUtcIso } = localWeekBounds('2026-03-01', TOKYO);
 		expect(startUtcIso).toBe('2026-02-22T15:00:00.000Z');
 		expect(endUtcIso).toBe('2026-03-01T15:00:00.000Z');
+	});
+});
+
+describe('localDateTimeInputOf()', () => {
+	test('formats a UTC instant as a local datetime-local string', () => {
+		expect(localDateTimeInputOf('2026-07-10T04:00:00.000Z', TOKYO)).toBe('2026-07-10T13:00:00');
+		// LA in July is PDT (-7): 20:00Z → 13:00 local.
+		expect(localDateTimeInputOf('2026-07-10T20:00:00.000Z', LA)).toBe('2026-07-10T13:00:00');
+	});
+
+	test('normalizes midnight to 00 (not 24) and rolls the date', () => {
+		// Tokyo +9: 15:00Z → 00:00 next local day.
+		expect(localDateTimeInputOf('2026-07-10T15:00:00.000Z', TOKYO)).toBe('2026-07-11T00:00:00');
+	});
+});
+
+describe('utcIsoFromLocalDateTime()', () => {
+	test('parses a local wall-clock string into a UTC ISO instant', () => {
+		expect(utcIsoFromLocalDateTime('2026-07-10T13:00:00', TOKYO)).toBe('2026-07-10T04:00:00.000Z');
+		expect(utcIsoFromLocalDateTime('2026-07-10T13:00:00', LA)).toBe('2026-07-10T20:00:00.000Z');
+	});
+
+	test('tolerates a missing seconds component', () => {
+		expect(utcIsoFromLocalDateTime('2026-07-10T13:00', TOKYO)).toBe('2026-07-10T04:00:00.000Z');
+	});
+
+	test('round-trips with localDateTimeInputOf on whole-second instants', () => {
+		for (const iso of ['2026-07-10T04:00:00.000Z', '2026-01-02T23:17:05.000Z']) {
+			for (const tz of [LA, TOKYO]) {
+				expect(utcIsoFromLocalDateTime(localDateTimeInputOf(iso, tz), tz)).toBe(iso);
+			}
+		}
 	});
 });

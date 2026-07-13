@@ -2,6 +2,7 @@ import { error, fail } from '@sveltejs/kit';
 import { getDb } from '$lib/db';
 import { getEntry } from '$lib/db/queries/entries';
 import { log } from '$lib/log';
+import { localDateTimeInputOf, utcIsoFromLocalDateTime } from '$lib/time';
 import {
 	cancelEdit,
 	discardEntry,
@@ -37,13 +38,21 @@ export const load: PageServerLoad = ({ params }) => {
 		)
 		.get(entry.taskId) as { taskName: string; projectName: string; clientName: string };
 
-	const segments = db
+	const rows = db
 		.prepare(
 			`SELECT id, started_at AS startedAt, stopped_at AS stoppedAt
 			 FROM time_entry_segments WHERE entry_id = ?
 			 ORDER BY started_at`
 		)
 		.all(params.id) as SegmentRow[];
+
+	// Enrich each segment with local-time strings for the datetime-local inputs
+	// and friendly display. Raw UTC values are kept for duration math on the page.
+	const segments = rows.map((r) => ({
+		...r,
+		startedAtLocal: localDateTimeInputOf(r.startedAt),
+		stoppedAtLocal: r.stoppedAt ? localDateTimeInputOf(r.stoppedAt) : ''
+	}));
 
 	return { entry, context, segments };
 };
@@ -107,10 +116,13 @@ export const actions: Actions = {
 		if (!correlationId) return fail(500, { error: 'correlationId missing on locals' });
 		const form = await request.formData();
 		const segmentId = String(form.get('segmentId') ?? '');
-		const startedAt = String(form.get('startedAt') ?? '');
-		const stoppedAtRaw = String(form.get('stoppedAt') ?? '');
-		const stoppedAt = stoppedAtRaw.length > 0 ? stoppedAtRaw : null;
-		if (!segmentId || !startedAt) return fail(400, { error: 'segmentId and startedAt required' });
+		const startedAtLocal = String(form.get('startedAt') ?? '');
+		const stoppedAtLocal = String(form.get('stoppedAt') ?? '');
+		if (!segmentId || !startedAtLocal)
+			return fail(400, { error: 'segmentId and started time required' });
+		// Inputs are local wall-clock (datetime-local); store as UTC ISO.
+		const startedAt = utcIsoFromLocalDateTime(startedAtLocal);
+		const stoppedAt = stoppedAtLocal.length > 0 ? utcIsoFromLocalDateTime(stoppedAtLocal) : null;
 		try {
 			updateSegment(getDb(), { segmentId, startedAt, stoppedAt }, correlationId);
 			return { success: true };

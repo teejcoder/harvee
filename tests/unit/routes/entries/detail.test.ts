@@ -135,12 +135,14 @@ describe('Step 4.5 — openEdit / updateSegment / saveEdit / cancelEdit', () => 
 			.prepare(`SELECT id FROM time_entry_segments WHERE entry_id = ?`)
 			.get(id) as { id: string };
 
-		// Invalid time range (stopped < started)
+		// Invalid time range (stopped < started). Inputs are local datetime-local
+		// strings now; started 15:00 > stopped 10:00 fails regardless of the tz they
+		// convert under, since both convert consistently.
 		const bad = (await actions.updateSegment(
 			makeEvent(id, {
 				segmentId: seg.id,
-				startedAt: '2026-07-10T15:00:00.000Z',
-				stoppedAt: '2026-07-10T10:00:00.000Z'
+				startedAt: '2026-07-10T15:00:00',
+				stoppedAt: '2026-07-10T10:00:00'
 			}) as never
 		)) as { status: number };
 		expect(bad.status).toBe(400);

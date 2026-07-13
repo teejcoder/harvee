@@ -68,19 +68,24 @@
 						<form method="post" action="?/updateSegment" class="flex flex-wrap items-end gap-2">
 							<input type="hidden" name="segmentId" value={seg.id} />
 							<label class="flex-1">
-								<span class="block text-xs text-gray-600">Started (UTC ISO)</span>
+								<span class="block text-xs text-gray-600">Started (local)</span>
 								<input
 									name="startedAt"
-									value={seg.startedAt}
-									class="w-full rounded border border-gray-300 px-2 py-1 font-mono text-xs"
+									type="datetime-local"
+									step="1"
+									value={seg.startedAtLocal}
+									class="w-full rounded border border-gray-300 px-2 py-1"
+									required
 								/>
 							</label>
 							<label class="flex-1">
-								<span class="block text-xs text-gray-600">Stopped (UTC ISO)</span>
+								<span class="block text-xs text-gray-600">Stopped (local)</span>
 								<input
 									name="stoppedAt"
-									value={seg.stoppedAt ?? ''}
-									class="w-full rounded border border-gray-300 px-2 py-1 font-mono text-xs"
+									type="datetime-local"
+									step="1"
+									value={seg.stoppedAtLocal}
+									class="w-full rounded border border-gray-300 px-2 py-1"
 								/>
 							</label>
 							<button
@@ -96,9 +101,13 @@
 		{:else}
 			<ul class="divide-y divide-gray-200 rounded border border-gray-200">
 				{#each data.segments as seg (seg.id)}
-					<li class="flex items-center justify-between px-4 py-2 font-mono text-sm">
-						<span>{seg.startedAt} → {seg.stoppedAt ?? '(open)'}</span>
-						<span>{fmtHours(seg.startedAt, seg.stoppedAt)}</span>
+					<li class="flex items-center justify-between px-4 py-2 text-sm">
+						<span class="font-mono">
+							{seg.startedAtLocal.replace('T', ' ')} → {seg.stoppedAtLocal
+								? seg.stoppedAtLocal.replace('T', ' ')
+								: '(open)'}
+						</span>
+						<span class="font-mono">{fmtHours(seg.startedAt, seg.stoppedAt)}</span>
 					</li>
 				{/each}
 			</ul>

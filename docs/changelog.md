@@ -63,4 +63,5 @@ A dated, one-line map of the build. Each bullet is a completed phase; the detail
 
 ### Changed
 
+- The segment editor on `/entries/[id]` now uses friendly local **date/time pickers** instead of raw UTC-ISO text fields. Editing inputs are `<input type="datetime-local" step="1">` prefilled in the system-local timezone; the read-only segment list shows local times too. Two helpers added to `src/lib/time.ts` (where all timezone math lives): `localDateTimeInputOf(utcIso)` formats a UTC instant as a local `YYYY-MM-DDTHH:mm:ss` input value, and `utcIsoFromLocalDateTime(local)` parses a local wall-clock string back to a UTC ISO instant (DST-safe, reusing the existing two-pass `localWallToUtcMs`). Values are still stored as UTC ISO; only the edit surface changed. Covered by 5 new Vitest cases (format, parse, missing-seconds tolerance, midnight normalization, round-trip across LA/Tokyo).
 - Tech stack: pinned TypeScript to latest 6.x, added Playwright + component testing surfaces, swapped `adapter-auto` for `adapter-vercel`.
