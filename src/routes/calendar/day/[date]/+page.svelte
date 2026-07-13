@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import type { PageProps } from './$types';
 
@@ -8,6 +9,10 @@
 		const [y, m, d] = data.date.split('-').map(Number);
 		const dt = new Date(Date.UTC(y, m - 1, d + days));
 		return dt.toISOString().slice(0, 10);
+	}
+
+	function jumpTo(date: string): void {
+		if (date) goto(resolve('/calendar/day/[date]', { date }));
 	}
 
 	function fmtTime(iso: string): string {
@@ -20,12 +25,34 @@
 	<nav class="mb-4 flex items-center justify-between text-sm">
 		<a
 			href={resolve('/calendar/day/[date]', { date: shiftDate(-1) })}
-			class="text-blue-700 hover:underline">← {shiftDate(-1)}</a
+			class="rounded px-2 py-1 text-blue-700 hover:bg-gray-100">←</a
 		>
-		<h1 class="text-2xl font-semibold">{data.date}</h1>
+		<div class="flex items-center gap-2">
+			<input
+				type="date"
+				value={data.date}
+				onchange={(e) => jumpTo(e.currentTarget.value)}
+				class="rounded border border-gray-300 px-2 py-1"
+				aria-label="Jump to date"
+			/>
+			{#if data.date !== data.today}
+				<a
+					href={resolve('/calendar/day/[date]', { date: data.today })}
+					class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50">Today</a
+				>
+			{/if}
+			<a
+				href={resolve('/calendar/week/[date]', { date: data.date })}
+				class="text-xs text-blue-700 hover:underline">Week</a
+			>
+			<a
+				href={resolve('/calendar/month/[yyyyMm]', { yyyyMm: data.date.slice(0, 7) })}
+				class="text-xs text-blue-700 hover:underline">Month</a
+			>
+		</div>
 		<a
 			href={resolve('/calendar/day/[date]', { date: shiftDate(1) })}
-			class="text-blue-700 hover:underline">{shiftDate(1)} →</a
+			class="rounded px-2 py-1 text-blue-700 hover:bg-gray-100">→</a
 		>
 	</nav>
 

@@ -30,13 +30,20 @@ export const load: PageServerLoad = ({ params }) => {
 
 	const context = db
 		.prepare(
-			`SELECT t.name AS taskName, p.name AS projectName, c.name AS clientName
+			`SELECT t.name AS taskName, p.id AS projectId, p.name AS projectName,
+			        c.id AS clientId, c.name AS clientName
 			 FROM tasks t
 			 JOIN projects p ON t.project_id = p.id
 			 JOIN clients c ON p.client_id = c.id
 			 WHERE t.id = ?`
 		)
-		.get(entry.taskId) as { taskName: string; projectName: string; clientName: string };
+		.get(entry.taskId) as {
+		taskName: string;
+		projectId: string;
+		projectName: string;
+		clientId: string;
+		clientName: string;
+	};
 
 	const rows = db
 		.prepare(

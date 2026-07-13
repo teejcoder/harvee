@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { resolve } from '$app/paths';
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import type { PageProps } from './$types';
 
@@ -26,9 +27,15 @@
 </script>
 
 <div class="mx-auto max-w-3xl p-6">
-	<div class="mb-4 text-sm text-gray-500">
-		{data.context.clientName} · {data.context.projectName}
-	</div>
+	<nav class="mb-4 text-sm text-gray-500">
+		<a href={resolve('/clients/[id]', { id: data.context.clientId })} class="hover:underline"
+			>{data.context.clientName}</a
+		>
+		·
+		<a href={resolve('/projects/[id]', { id: data.context.projectId })} class="hover:underline"
+			>{data.context.projectName}</a
+		>
+	</nav>
 	<h1 class="mb-1 text-2xl font-semibold">{data.context.taskName}</h1>
 	<p class="mb-6 text-sm text-gray-600">
 		State: <span class="font-mono">{data.entry.state}</span> · Total {totalHours.toFixed(2)}h
