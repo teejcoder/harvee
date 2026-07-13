@@ -3,12 +3,19 @@
 	import { resolve } from '$app/paths';
 	import InvoiceList from '$lib/components/InvoiceList.svelte';
 	import { formatMoney } from '$lib/money';
+	import type { SubmitFunction } from '@sveltejs/kit';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
 
 	const rate = (minor: number): string =>
 		formatMoney(minor, data.currency.code, data.currency.decimals, data.currency.locale);
+
+	const confirmSubmit =
+		(message: string): SubmitFunction =>
+		({ cancel }) => {
+			if (!confirm(message)) cancel();
+		};
 
 	// Invoice-range presets. Uses the browser's local date (matches the app's
 	// system-local day convention on a single machine).
@@ -38,27 +45,55 @@
 		<a href={resolve('/clients')} class="text-blue-700 hover:underline">← Clients</a>
 	</nav>
 
-	<div class="mb-1 flex items-center justify-between">
-		<h1 class="text-2xl font-semibold">{data.client.name}</h1>
-		{#if data.client.archivedAt}
-			<form method="post" use:enhance action="?/unarchiveClient">
+	<div class="mb-1 flex flex-wrap items-center justify-between gap-2">
+		<form method="post" use:enhance action="?/rename" class="flex items-center gap-2">
+			<input
+				name="name"
+				value={data.client.name}
+				class="rounded border border-gray-300 px-2 py-1 text-2xl font-semibold"
+				required
+				aria-label="Client name"
+			/>
+			<button
+				type="submit"
+				class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50">Rename</button
+			>
+		</form>
+		<div class="flex gap-2">
+			{#if data.client.archivedAt}
+				<form method="post" use:enhance action="?/unarchiveClient">
+					<button
+						type="submit"
+						class="rounded border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
+					>
+						Unarchive
+					</button>
+				</form>
+			{:else}
+				<form method="post" use:enhance action="?/archiveClient">
+					<button
+						type="submit"
+						class="rounded border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
+					>
+						Archive
+					</button>
+				</form>
+			{/if}
+			<form
+				method="post"
+				use:enhance={confirmSubmit(
+					'Delete this client? This cannot be undone. (Its projects must be removed first.)'
+				)}
+				action="?/deleteClient"
+			>
 				<button
 					type="submit"
-					class="rounded border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
+					class="rounded border border-red-300 px-3 py-1 text-sm text-red-700 hover:bg-red-50"
 				>
-					Unarchive
+					Delete
 				</button>
 			</form>
-		{:else}
-			<form method="post" use:enhance action="?/archiveClient">
-				<button
-					type="submit"
-					class="rounded border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
-				>
-					Archive
-				</button>
-			</form>
-		{/if}
+		</div>
 	</div>
 	{#if data.client.archivedAt}
 		<p class="mb-4 text-sm text-gray-500">Archived {data.client.archivedAt}</p>

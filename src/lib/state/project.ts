@@ -60,6 +60,35 @@ export function createProject(
 	return created;
 }
 
+// Edit a project's name and hourly rate — a field edit, not a state transition.
+// Note: this changes the rate for NEW invoice generation only; existing invoice
+// line items snapshot the rate at generation time and are unaffected.
+export function updateProject(
+	db: Database,
+	args: { id: string; name: string; hourlyRate: number },
+	correlationId: string
+): projectsQ.Project {
+	log.debug({ event: 'state.project.update.enter', correlationId, entityId: args.id });
+	const current = projectsQ.getProject(db, args.id);
+	if (!current) throw new Error(`project ${args.id} not found`);
+	const now = nowUtcIso();
+	db.prepare(`UPDATE projects SET name = ?, hourly_rate = ?, updated_at = ? WHERE id = ?`).run(
+		args.name,
+		args.hourlyRate,
+		now,
+		args.id
+	);
+	log.info({
+		event: 'project.update',
+		correlationId,
+		entityType: 'project',
+		entityId: args.id,
+		before: { name: current.name, hourlyRate: current.hourlyRate },
+		after: { name: args.name, hourlyRate: args.hourlyRate }
+	});
+	return { ...current, name: args.name, hourlyRate: args.hourlyRate, updatedAt: now };
+}
+
 export function archiveProject(db: Database, id: string, correlationId: string): void {
 	log.debug({ event: 'state.project.archive.enter', correlationId, entityId: id });
 	const current = projectsQ.getProject(db, id);

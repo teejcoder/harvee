@@ -39,6 +39,33 @@ export function createClient(
 	return created;
 }
 
+// Rename a client — a field edit, not a state transition (stays active/archived).
+// INFO log with before/after, no logTransition line (same pattern as updateTask).
+export function updateClient(
+	db: Database,
+	args: { id: string; name: string },
+	correlationId: string
+): clientsQ.Client {
+	log.debug({ event: 'state.client.update.enter', correlationId, entityId: args.id });
+	const current = clientsQ.getClient(db, args.id);
+	if (!current) throw new Error(`client ${args.id} not found`);
+	const now = nowUtcIso();
+	db.prepare(`UPDATE clients SET name = ?, updated_at = ? WHERE id = ?`).run(
+		args.name,
+		now,
+		args.id
+	);
+	log.info({
+		event: 'client.update',
+		correlationId,
+		entityType: 'client',
+		entityId: args.id,
+		before: { name: current.name },
+		after: { name: args.name }
+	});
+	return { ...current, name: args.name, updatedAt: now };
+}
+
 export function archiveClient(db: Database, id: string, correlationId: string): void {
 	log.debug({ event: 'state.client.archive.enter', correlationId, entityId: id });
 	const current = clientsQ.getClient(db, id);

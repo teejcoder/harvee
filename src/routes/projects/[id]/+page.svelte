@@ -1,10 +1,22 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
-	import { formatMoney } from '$lib/money';
+	import { fromMinorUnits } from '$lib/money';
+	import type { SubmitFunction } from '@sveltejs/kit';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
+
+	const confirmSubmit =
+		(message: string): SubmitFunction =>
+		({ cancel }) => {
+			if (!confirm(message)) cancel();
+		};
+
+	const rateStep = $derived((10 ** -data.currency.decimals).toString());
+	const rateValue = $derived(
+		fromMinorUnits(data.project.hourlyRate, data.currency.decimals).toFixed(data.currency.decimals)
+	);
 </script>
 
 <div class="mx-auto max-w-3xl p-6">
@@ -15,37 +27,74 @@
 		>
 	</nav>
 
-	<div class="mb-1 flex items-center justify-between">
-		<h1 class="text-2xl font-semibold">{data.project.name}</h1>
-		{#if data.project.archivedAt}
-			<form method="post" use:enhance action="?/unarchiveProject">
+	<div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+		<form method="post" use:enhance action="?/editProject" class="flex flex-wrap items-end gap-2">
+			<label>
+				<span class="block text-xs text-gray-600">Project</span>
+				<input
+					name="name"
+					value={data.project.name}
+					class="rounded border border-gray-300 px-2 py-1 text-xl font-semibold"
+					required
+					aria-label="Project name"
+				/>
+			</label>
+			<label>
+				<span class="block text-xs text-gray-600">Rate/hr ({data.currency.code})</span>
+				<input
+					name="hourlyRate"
+					type="number"
+					min="0"
+					step={rateStep}
+					value={rateValue}
+					class="w-28 rounded border border-gray-300 px-2 py-1"
+					required
+				/>
+			</label>
+			<button
+				type="submit"
+				class="rounded border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50">Save</button
+			>
+		</form>
+		<div class="flex gap-2">
+			{#if data.project.archivedAt}
+				<form method="post" use:enhance action="?/unarchiveProject">
+					<button
+						type="submit"
+						class="rounded border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
+					>
+						Unarchive
+					</button>
+				</form>
+			{:else}
+				<form method="post" use:enhance action="?/archiveProject">
+					<button
+						type="submit"
+						class="rounded border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
+					>
+						Archive
+					</button>
+				</form>
+			{/if}
+			<form
+				method="post"
+				use:enhance={confirmSubmit(
+					'Delete this project? Its tasks must be removed first. This cannot be undone.'
+				)}
+				action="?/deleteProject"
+			>
 				<button
 					type="submit"
-					class="rounded border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
+					class="rounded border border-red-300 px-3 py-1 text-sm text-red-700 hover:bg-red-50"
 				>
-					Unarchive
+					Delete
 				</button>
 			</form>
-		{:else}
-			<form method="post" use:enhance action="?/archiveProject">
-				<button
-					type="submit"
-					class="rounded border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
-				>
-					Archive
-				</button>
-			</form>
-		{/if}
+		</div>
 	</div>
-	<p class="mb-4 text-sm text-gray-600">
-		{formatMoney(
-			data.project.hourlyRate,
-			data.currency.code,
-			data.currency.decimals,
-			data.currency.locale
-		)}/hr
-		{#if data.project.archivedAt}<span class="ml-2 text-xs text-gray-500">archived</span>{/if}
-	</p>
+	{#if data.project.archivedAt}
+		<p class="mb-4 text-xs text-gray-500">Archived {data.project.archivedAt}</p>
+	{/if}
 
 	<h2 class="mt-8 mb-3 text-lg font-medium">Tasks</h2>
 
@@ -106,6 +155,18 @@
 						</div>
 					{:else}
 						<div class="flex flex-wrap items-end gap-2">
+							{#if !data.running}
+								<form method="post" use:enhance action="/timer?/start">
+									<input type="hidden" name="taskId" value={task.id} />
+									<input type="hidden" name="goToEntry" value="1" />
+									<button
+										type="submit"
+										class="rounded bg-emerald-600 px-3 py-1 text-sm font-medium text-white hover:bg-emerald-700"
+									>
+										Start
+									</button>
+								</form>
+							{/if}
 							<form
 								method="post"
 								use:enhance
@@ -145,6 +206,19 @@
 									class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50"
 								>
 									Archive
+								</button>
+							</form>
+							<form
+								method="post"
+								use:enhance={confirmSubmit('Delete this task? This cannot be undone.')}
+								action="?/deleteTask"
+							>
+								<input type="hidden" name="taskId" value={task.id} />
+								<button
+									type="submit"
+									class="rounded border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50"
+								>
+									Delete
 								</button>
 							</form>
 						</div>

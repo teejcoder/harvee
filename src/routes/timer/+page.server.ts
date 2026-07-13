@@ -27,12 +27,14 @@ export const actions: Actions = {
 		const form = await request.formData();
 		const taskId = String(form.get('taskId') ?? '');
 		const notes = String(form.get('notes') ?? '').trim();
+		const goToEntry = form.get('goToEntry') != null;
 		if (!taskId) return fail(400, { error: 'taskId required' });
 
+		let entryId: string;
 		try {
 			const entry = pickTask(getDb(), { taskId, notes: notes || undefined }, correlationId);
 			startTimer(getDb(), entry.id, correlationId);
-			return { success: true, entryId: entry.id };
+			entryId = entry.id;
 		} catch (err) {
 			log.error({
 				event: 'routes.timer.start.failed',
@@ -41,6 +43,10 @@ export const actions: Actions = {
 			});
 			return toActionResult(err);
 		}
+		// When started from a task row (drill-down flow), land on the entry so the
+		// user can edit/annotate the running timer. The widget stays put (no field).
+		if (goToEntry) throw redirect(303, `/entries/${entryId}`);
+		return { success: true, entryId };
 	},
 
 	stop: async ({ request, locals }) => {

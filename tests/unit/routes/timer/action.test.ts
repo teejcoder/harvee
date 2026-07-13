@@ -94,6 +94,20 @@ describe('POST /timer ?/start (Step 4.1)', () => {
 			)
 		).toBe(true);
 	});
+
+	test('with goToEntry, start redirects (303) to the new entry (drill-down flow)', async () => {
+		const taskId = seedTaskChain();
+		let redirect: { status: number; location: string } | undefined;
+		try {
+			await actions.start(makeEvent('/timer?/start', { taskId, goToEntry: '1' }) as never);
+		} catch (err) {
+			if (err && typeof err === 'object' && 'status' in err && 'location' in err) {
+				redirect = err as { status: number; location: string };
+			}
+		}
+		expect(redirect?.status).toBe(303);
+		expect(redirect?.location).toMatch(/^\/entries\/[0-9A-HJKMNP-TV-Z]{26}$/);
+	});
 });
 
 describe('POST /timer ?/stop (Step 4.2)', () => {

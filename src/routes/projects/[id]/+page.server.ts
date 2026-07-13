@@ -1,10 +1,11 @@
-import { error, fail } from '@sveltejs/kit';
+import { error, fail, redirect } from '@sveltejs/kit';
 import { getDb } from '$lib/db';
 import { getProject } from '$lib/db/queries/projects';
 import { getSettings } from '$lib/db/queries/settings';
 import { log } from '$lib/log';
-import { archiveProject, unarchiveProject } from '$lib/state/project';
-import { archiveTask, createTask, unarchiveTask, updateTask } from '$lib/state/task';
+import { archiveProject, deleteProject, unarchiveProject, updateProject } from '$lib/state/project';
+import { archiveTask, createTask, deleteTask, unarchiveTask, updateTask } from '$lib/state/task';
+import { toMinorUnits } from '$lib/money';
 import { StateTransitionError } from '$lib/state/_error';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -68,6 +69,91 @@ export const load: PageServerLoad = ({ params }) => {
 };
 
 export const actions: Actions = {
+	editProject: async ({ request, locals, params }) => {
+		const correlationId = locals.correlationId;
+		if (!correlationId) return fail(500, { error: 'correlationId missing on locals' });
+		const form = await request.formData();
+		const name = String(form.get('name') ?? '').trim();
+		const rateInput = Number(form.get('hourlyRate'));
+		let reason: string | null = null;
+		if (name.length === 0) reason = 'empty_name';
+		else if (!Number.isFinite(rateInput) || rateInput < 0) reason = 'invalid_hourly_rate';
+		if (reason) {
+			log.warn({
+				event: 'routes.projects.edit.validation.rejected',
+				correlationId,
+				entityType: 'project',
+				entityId: params.id,
+				reason
+			});
+			return fail(400, {
+				error: reason === 'empty_name' ? 'Name is required' : 'Rate must be a non-negative number'
+			});
+		}
+		const hourlyRate = toMinorUnits(rateInput, getSettings(getDb()).currencyDecimals);
+		return handleTransition(
+			() => {
+				updateProject(getDb(), { id: params.id, name, hourlyRate }, correlationId);
+				return { success: true };
+			},
+			correlationId,
+			'routes.projects.edit.failed'
+		);
+	},
+
+	deleteProject: async ({ locals, params }) => {
+		const correlationId = locals.correlationId;
+		if (!correlationId) return fail(500, { error: 'correlationId missing on locals' });
+		const project = getProject(getDb(), params.id);
+		if (!project) throw error(404, `Project ${params.id} not found`);
+		const childCount = (
+			getDb().prepare(`SELECT COUNT(*) AS n FROM tasks WHERE project_id = ?`).get(params.id) as {
+				n: number;
+			}
+		).n;
+		if (childCount > 0) {
+			log.warn({
+				event: 'routes.projects.delete.rejected',
+				correlationId,
+				entityType: 'project',
+				entityId: params.id,
+				reason: 'has_tasks'
+			});
+			return fail(400, { error: `Delete or archive this project's ${childCount} task(s) first.` });
+		}
+		try {
+			deleteProject(getDb(), params.id, correlationId);
+		} catch (err) {
+			if (err instanceof StateTransitionError) {
+				return fail(400, { error: err.message, rejectionReason: err.rejectionReason });
+			}
+			log.error({
+				event: 'routes.projects.delete.failed',
+				correlationId,
+				entityType: 'project',
+				entityId: params.id,
+				error: { message: (err as Error).message, stack: (err as Error).stack }
+			});
+			return fail(500, { error: (err as Error).message });
+		}
+		throw redirect(303, `/clients/${project.clientId}`);
+	},
+
+	deleteTask: async ({ request, locals }) => {
+		const correlationId = locals.correlationId;
+		if (!correlationId) return fail(500, { error: 'correlationId missing on locals' });
+		const taskId = String((await request.formData()).get('taskId') ?? '');
+		if (!taskId) return fail(400, { error: 'taskId required' });
+		return handleTransition(
+			() => {
+				deleteTask(getDb(), taskId, correlationId);
+				return { success: true };
+			},
+			correlationId,
+			'routes.tasks.delete.failed'
+		);
+	},
+
 	create: async ({ request, locals, params }) => {
 		const correlationId = locals.correlationId;
 		if (!correlationId) return fail(500, { error: 'correlationId missing on locals' });

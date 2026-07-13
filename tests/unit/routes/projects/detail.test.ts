@@ -130,6 +130,46 @@ describe('POST /projects/[id] ?/create', () => {
 	});
 });
 
+describe('POST /projects/[id] ?/editProject and ?/deleteTask', () => {
+	test('editProject updates name + rate (rate entered in major units → minor)', async () => {
+		const client = createClient(getDb(), { name: 'A' }, CID);
+		const project = createProject(
+			getDb(),
+			{ clientId: client.id, name: 'Old', hourlyRate: 10000 },
+			CID
+		);
+		const event = makeCreateEvent(project.id, { name: 'New', hourlyRate: '150' }, CID);
+		const res = (await actions.editProject(event as never)) as { success: boolean };
+		expect(res.success).toBe(true);
+		const row = getDb()
+			.prepare(`SELECT name, hourly_rate AS r FROM projects WHERE id = ?`)
+			.get(project.id) as { name: string; r: number };
+		expect(row).toEqual({ name: 'New', r: 15000 }); // $150 → 15000 minor units (USD)
+	});
+
+	test('deleteTask removes an unreferenced task', async () => {
+		const client = createClient(getDb(), { name: 'A' }, CID);
+		const project = createProject(
+			getDb(),
+			{ clientId: client.id, name: 'P', hourlyRate: 10000 },
+			CID
+		);
+		const created = (await actions.create(
+			makeCreateEvent(project.id, { name: 'T' }, CID) as never
+		)) as { taskId: string };
+		const res = (await actions.deleteTask(
+			makeCreateEvent(project.id, { taskId: created.taskId }, CID) as never
+		)) as { success: boolean };
+		expect(res.success).toBe(true);
+		const gone = getDb()
+			.prepare(`SELECT COUNT(*) AS n FROM tasks WHERE id = ?`)
+			.get(created.taskId) as {
+			n: number;
+		};
+		expect(gone.n).toBe(0);
+	});
+});
+
 describe('POST /projects/[id] ?/updateTask', () => {
 	async function seedTask(): Promise<{ projectId: string; taskId: string }> {
 		const client = createClient(getDb(), { name: 'A' }, CID);

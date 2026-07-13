@@ -5,7 +5,7 @@ import { listInvoices } from '$lib/db/queries/invoices';
 import { getSettings } from '$lib/db/queries/settings';
 import { log } from '$lib/log';
 import { toMinorUnits } from '$lib/money';
-import { archiveClient, unarchiveClient } from '$lib/state/client';
+import { archiveClient, deleteClient, unarchiveClient, updateClient } from '$lib/state/client';
 import { archiveProject, createProject, unarchiveProject } from '$lib/state/project';
 import { generateDraftInvoice } from '$lib/state/invoice';
 import { StateTransitionError } from '$lib/state/_error';
@@ -134,6 +134,70 @@ export const actions: Actions = {
 			correlationId,
 			'routes.projects.create.failed'
 		);
+	},
+
+	rename: async ({ request, locals, params }) => {
+		const correlationId = locals.correlationId;
+		if (!correlationId) return fail(500, { error: 'correlationId missing on locals' });
+		const name = String((await request.formData()).get('name') ?? '').trim();
+		if (name.length === 0) {
+			log.warn({
+				event: 'routes.clients.rename.validation.rejected',
+				correlationId,
+				entityType: 'client',
+				entityId: params.id,
+				reason: 'empty_name'
+			});
+			return fail(400, { error: 'Name is required' });
+		}
+		return handleTransition(
+			() => {
+				updateClient(getDb(), { id: params.id, name }, correlationId);
+				return { success: true };
+			},
+			correlationId,
+			'routes.clients.rename.failed'
+		);
+	},
+
+	deleteClient: async ({ locals, params }) => {
+		const correlationId = locals.correlationId;
+		if (!correlationId) return fail(500, { error: 'correlationId missing on locals' });
+		// No auto-cascade: a client with projects can't be hard-deleted (FK RESTRICT).
+		// Give a clear message instead of a raw constraint error.
+		const childCount = (
+			getDb().prepare(`SELECT COUNT(*) AS n FROM projects WHERE client_id = ?`).get(params.id) as {
+				n: number;
+			}
+		).n;
+		if (childCount > 0) {
+			log.warn({
+				event: 'routes.clients.delete.rejected',
+				correlationId,
+				entityType: 'client',
+				entityId: params.id,
+				reason: 'has_projects'
+			});
+			return fail(400, {
+				error: `Delete or archive this client's ${childCount} project(s) first.`
+			});
+		}
+		try {
+			deleteClient(getDb(), params.id, correlationId);
+		} catch (err) {
+			if (err instanceof StateTransitionError) {
+				return fail(400, { error: err.message, rejectionReason: err.rejectionReason });
+			}
+			log.error({
+				event: 'routes.clients.delete.failed',
+				correlationId,
+				entityType: 'client',
+				entityId: params.id,
+				error: { message: (err as Error).message, stack: (err as Error).stack }
+			});
+			return fail(500, { error: (err as Error).message });
+		}
+		throw redirect(303, '/clients');
 	},
 
 	archiveClient: async ({ locals, params }) => {
