@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
 	import type { PageProps } from './$types';
 
@@ -19,7 +20,7 @@
 		</div>
 	{/if}
 
-	<form method="post" action="?/create" class="mb-8 flex gap-2">
+	<form method="post" use:enhance action="?/create" class="mb-8 flex gap-2">
 		<input
 			name="name"
 			placeholder="Client name"

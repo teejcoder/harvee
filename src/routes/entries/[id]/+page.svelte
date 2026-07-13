@@ -1,7 +1,15 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
+	import type { SubmitFunction } from '@sveltejs/kit';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
+
+	const confirmSubmit =
+		(message: string): SubmitFunction =>
+		({ cancel }) => {
+			if (!confirm(message)) cancel();
+		};
 
 	function fmtHours(startedAt: string, stoppedAt: string | null): string {
 		if (!stoppedAt) return 'open';
@@ -39,7 +47,7 @@
 	{#if data.entry.state !== 'entry.locked'}
 		<section class="mb-6">
 			<h2 class="mb-2 text-sm font-medium text-gray-700">Notes</h2>
-			<form method="post" action="?/updateNotes" class="space-y-2">
+			<form method="post" use:enhance action="?/updateNotes" class="space-y-2">
 				<textarea
 					name="notes"
 					rows="4"
@@ -65,7 +73,12 @@
 			<ul class="space-y-2">
 				{#each data.segments as seg (seg.id)}
 					<li class="rounded border border-gray-200 p-3">
-						<form method="post" action="?/updateSegment" class="flex flex-wrap items-end gap-2">
+						<form
+							method="post"
+							use:enhance
+							action="?/updateSegment"
+							class="flex flex-wrap items-end gap-2"
+						>
 							<input type="hidden" name="segmentId" value={seg.id} />
 							<label class="flex-1">
 								<span class="block text-xs text-gray-600">Started (local)</span>
@@ -117,7 +130,7 @@
 	<!-- Actions -->
 	<section class="flex flex-wrap gap-2 border-t border-gray-200 pt-4">
 		{#if data.entry.state === 'entry.stopped'}
-			<form method="post" action="?/openEdit">
+			<form method="post" use:enhance action="?/openEdit">
 				<button
 					type="submit"
 					class="rounded border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50"
@@ -125,7 +138,7 @@
 					Edit segments
 				</button>
 			</form>
-			<form method="post" action="?/resume">
+			<form method="post" use:enhance action="?/resume">
 				<button
 					type="submit"
 					class="rounded bg-blue-600 px-3 py-1 text-sm font-medium text-white hover:bg-blue-700"
@@ -133,7 +146,13 @@
 					Resume
 				</button>
 			</form>
-			<form method="post" action="?/discard">
+			<form
+				method="post"
+				use:enhance={confirmSubmit(
+					'Discard this entry? Its time will be removed. This cannot be undone.'
+				)}
+				action="?/discard"
+			>
 				<button
 					type="submit"
 					class="rounded border border-red-300 px-3 py-1 text-sm text-red-700 hover:bg-red-50"
@@ -143,7 +162,7 @@
 			</form>
 		{/if}
 		{#if data.entry.state === 'entry.editing'}
-			<form method="post" action="?/saveEdit">
+			<form method="post" use:enhance action="?/saveEdit">
 				<button
 					type="submit"
 					class="rounded bg-blue-600 px-3 py-1 text-sm font-medium text-white hover:bg-blue-700"
@@ -151,7 +170,7 @@
 					Done editing
 				</button>
 			</form>
-			<form method="post" action="?/cancelEdit">
+			<form method="post" use:enhance action="?/cancelEdit">
 				<button
 					type="submit"
 					class="rounded border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50"

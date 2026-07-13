@@ -1,4 +1,4 @@
-import { error, fail } from '@sveltejs/kit';
+import { error, fail, redirect } from '@sveltejs/kit';
 import { getDb } from '$lib/db';
 import { getInvoice } from '$lib/db/queries/invoices';
 import { listInvoiceLines } from '$lib/db/queries/lineItems';
@@ -140,9 +140,10 @@ export const actions: Actions = {
 		if (!correlationId) return fail(500, { error: 'correlationId missing on locals' });
 		try {
 			deleteDraft(getDb(), params.id, correlationId);
-			return { success: true, deleted: true };
 		} catch (err) {
 			return toActionResult(err);
 		}
+		// The invoice no longer exists — send the user to the list instead of a 404.
+		throw redirect(303, '/invoices');
 	}
 };

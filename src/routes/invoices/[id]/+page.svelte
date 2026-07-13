@@ -1,17 +1,26 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
+	import { formatMoney } from '$lib/money';
+	import type { SubmitFunction } from '@sveltejs/kit';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
 
-	function fmtMoney(minor: number): string {
-		return new Intl.NumberFormat(data.invoice.invoiceLocale, {
-			style: 'currency',
-			currency: data.invoice.currencyCode,
-			minimumFractionDigits: data.invoice.currencyDecimals,
-			maximumFractionDigits: data.invoice.currencyDecimals
-		}).format(minor / 100);
-	}
+	const fmtMoney = (minor: number): string =>
+		formatMoney(
+			minor,
+			data.invoice.currencyCode,
+			data.invoice.currencyDecimals,
+			data.invoice.invoiceLocale
+		);
+
+	// Confirm before a destructive, enhanced submit; cancel keeps the page untouched.
+	const confirmSubmit =
+		(message: string): SubmitFunction =>
+		({ cancel }) => {
+			if (!confirm(message)) cancel();
+		};
 
 	const isDraft = $derived(data.invoice.state === 'invoice.draft');
 	const isFinalizedish = $derived(
@@ -96,7 +105,12 @@
 			<ul class="space-y-3">
 				{#each data.lines.filter((l) => l.kind === 'task') as line (line.id)}
 					<li>
-						<form method="post" action="?/updateLine" class="flex flex-wrap items-end gap-2">
+						<form
+							method="post"
+							use:enhance
+							action="?/updateLine"
+							class="flex flex-wrap items-end gap-2"
+						>
 							<input type="hidden" name="lineId" value={line.id} />
 							<label class="flex-1">
 								<span class="block text-xs text-gray-600">Description</span>
@@ -146,7 +160,7 @@
 		<section class="mb-6 rounded border border-gray-200 p-4">
 			<h2 class="mb-2 text-sm font-medium text-gray-700">Discount line</h2>
 			{#if data.lines.some((l) => l.kind === 'discount')}
-				<form method="post" action="?/removeDiscount">
+				<form method="post" use:enhance action="?/removeDiscount">
 					<button
 						type="submit"
 						class="rounded border border-red-300 px-3 py-1 text-sm text-red-700 hover:bg-red-50"
@@ -155,7 +169,12 @@
 					</button>
 				</form>
 			{:else}
-				<form method="post" action="?/addDiscount" class="flex flex-wrap items-end gap-2">
+				<form
+					method="post"
+					use:enhance
+					action="?/addDiscount"
+					class="flex flex-wrap items-end gap-2"
+				>
 					<label class="flex-1">
 						<span class="block text-xs text-gray-600">Description</span>
 						<input
@@ -189,7 +208,13 @@
 	<!-- Actions -->
 	<section class="flex flex-wrap gap-2 border-t border-gray-200 pt-4">
 		{#if isDraft}
-			<form method="post" action="?/finalize">
+			<form
+				method="post"
+				use:enhance={confirmSubmit(
+					'Finalize this invoice? It gets a number, locks its time entries, and can no longer be edited.'
+				)}
+				action="?/finalize"
+			>
 				<button
 					type="submit"
 					class="rounded bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
@@ -197,7 +222,11 @@
 					Finalize
 				</button>
 			</form>
-			<form method="post" action="?/delete">
+			<form
+				method="post"
+				use:enhance={confirmSubmit('Delete this draft invoice? This cannot be undone.')}
+				action="?/delete"
+			>
 				<button
 					type="submit"
 					class="rounded border border-red-300 px-3 py-2 text-sm text-red-700 hover:bg-red-50"
@@ -215,7 +244,13 @@
 					Export PDF
 				</button>
 			</form>
-			<form method="post" action="?/void">
+			<form
+				method="post"
+				use:enhance={confirmSubmit(
+					'Void this invoice? Its time entries will be discarded. This cannot be undone.'
+				)}
+				action="?/void"
+			>
 				<button
 					type="submit"
 					class="rounded border border-red-300 px-3 py-2 text-sm text-red-700 hover:bg-red-50"

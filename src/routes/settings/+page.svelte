@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -16,7 +17,7 @@
 		</div>
 	{/if}
 
-	<form method="post" action="?/update" class="space-y-4">
+	<form method="post" use:enhance action="?/update" class="space-y-4">
 		<fieldset class="space-y-3 rounded border border-gray-200 p-4">
 			<legend class="px-2 text-sm font-medium text-gray-600">Sender</legend>
 

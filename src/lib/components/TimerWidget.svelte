@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
 	import type { RunningEntryView, TaskOption } from './timer-types';
 
 	interface Props {
@@ -45,7 +46,7 @@
 			<div class="font-mono text-lg tabular-nums" data-testid="elapsed">
 				{elapsedLabel}
 			</div>
-			<form method="post" action="/timer?/stop">
+			<form method="post" use:enhance action="/timer?/stop">
 				<input type="hidden" name="entryId" value={running.id} />
 				<button
 					type="submit"
@@ -59,7 +60,7 @@
 				No active tasks. Create a client → project → task to begin.
 			</div>
 		{:else}
-			<form method="post" action="/timer?/start" class="flex flex-1 items-center gap-3">
+			<form method="post" use:enhance action="/timer?/start" class="flex flex-1 items-center gap-3">
 				<label class="flex flex-1 items-center gap-2">
 					<span class="text-sm text-gray-600">Task</span>
 					<select name="taskId" class="flex-1 rounded border border-gray-300 px-3 py-2" required>

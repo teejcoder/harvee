@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
 	import type { PageProps } from './$types';
 
@@ -16,7 +17,7 @@
 	<div class="mb-1 flex items-center justify-between">
 		<h1 class="text-2xl font-semibold">{data.project.name}</h1>
 		{#if data.project.archivedAt}
-			<form method="post" action="?/unarchiveProject">
+			<form method="post" use:enhance action="?/unarchiveProject">
 				<button
 					type="submit"
 					class="rounded border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
@@ -25,7 +26,7 @@
 				</button>
 			</form>
 		{:else}
-			<form method="post" action="?/archiveProject">
+			<form method="post" use:enhance action="?/archiveProject">
 				<button
 					type="submit"
 					class="rounded border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
@@ -53,7 +54,7 @@
 		</div>
 	{/if}
 
-	<form method="post" action="?/create" class="mb-6 flex flex-wrap items-end gap-2">
+	<form method="post" use:enhance action="?/create" class="mb-6 flex flex-wrap items-end gap-2">
 		<input
 			name="name"
 			placeholder="Task name"
@@ -87,7 +88,7 @@
 									<div class="text-xs text-gray-500">{task.description}</div>
 								{/if}
 							</div>
-							<form method="post" action="?/unarchiveTask">
+							<form method="post" use:enhance action="?/unarchiveTask">
 								<input type="hidden" name="taskId" value={task.id} />
 								<button
 									type="submit"
@@ -101,6 +102,7 @@
 						<div class="flex flex-wrap items-end gap-2">
 							<form
 								method="post"
+								use:enhance
 								action="?/updateTask"
 								class="flex flex-1 flex-wrap items-end gap-2"
 							>
@@ -130,7 +132,7 @@
 									Save
 								</button>
 							</form>
-							<form method="post" action="?/archiveTask">
+							<form method="post" use:enhance action="?/archiveTask">
 								<input type="hidden" name="taskId" value={task.id} />
 								<button
 									type="submit"

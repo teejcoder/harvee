@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
 	import InvoiceList from '$lib/components/InvoiceList.svelte';
 	import type { PageProps } from './$types';
@@ -14,7 +15,7 @@
 	<div class="mb-1 flex items-center justify-between">
 		<h1 class="text-2xl font-semibold">{data.client.name}</h1>
 		{#if data.client.archivedAt}
-			<form method="post" action="?/unarchiveClient">
+			<form method="post" use:enhance action="?/unarchiveClient">
 				<button
 					type="submit"
 					class="rounded border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
@@ -23,7 +24,7 @@
 				</button>
 			</form>
 		{:else}
-			<form method="post" action="?/archiveClient">
+			<form method="post" use:enhance action="?/archiveClient">
 				<button
 					type="submit"
 					class="rounded border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
@@ -39,7 +40,12 @@
 
 	<section class="mt-6 rounded border border-gray-200 p-4">
 		<h2 class="mb-2 text-sm font-medium text-gray-700">Generate invoice</h2>
-		<form method="post" action="?/generateInvoice" class="flex flex-wrap items-end gap-2">
+		<form
+			method="post"
+			use:enhance
+			action="?/generateInvoice"
+			class="flex flex-wrap items-end gap-2"
+		>
 			<label>
 				<span class="block text-xs text-gray-600">Start date</span>
 				<input
@@ -89,7 +95,7 @@
 		</div>
 	{/if}
 
-	<form method="post" action="?/create" class="mb-6 flex flex-wrap items-end gap-2">
+	<form method="post" use:enhance action="?/create" class="mb-6 flex flex-wrap items-end gap-2">
 		<label class="flex-1">
 			<span class="block text-xs text-gray-600">Name</span>
 			<input
@@ -135,7 +141,7 @@
 					<span class="flex items-center gap-3 text-sm text-gray-600">
 						<span>{(project.hourlyRate / 100).toFixed(2)}/hr</span>
 						{#if project.archivedAt}
-							<form method="post" action="?/unarchiveProject">
+							<form method="post" use:enhance action="?/unarchiveProject">
 								<input type="hidden" name="projectId" value={project.id} />
 								<button
 									type="submit"
@@ -145,7 +151,7 @@
 								</button>
 							</form>
 						{:else}
-							<form method="post" action="?/archiveProject">
+							<form method="post" use:enhance action="?/archiveProject">
 								<input type="hidden" name="projectId" value={project.id} />
 								<button
 									type="submit"

@@ -31,6 +31,29 @@
 			? String((page.form as { error: unknown }).error)
 			: undefined
 	);
+
+	// Global toast: surface any enhanced action's result regardless of scroll
+	// position (the per-page banners stay for on-page context). page.form updates
+	// in place on every use:enhance submit.
+	let toast = $state<{ kind: 'success' | 'error'; msg: string } | null>(null);
+	let lastForm: unknown = undefined;
+	let toastTimer: ReturnType<typeof setTimeout> | undefined;
+	$effect(() => {
+		const f = page.form;
+		if (f === lastForm) return;
+		lastForm = f;
+		if (!f || typeof f !== 'object') return;
+		const next =
+			'error' in f && f.error
+				? { kind: 'error' as const, msg: String((f as { error: unknown }).error) }
+				: 'success' in f && (f as { success?: unknown }).success
+					? { kind: 'success' as const, msg: 'Saved' }
+					: null;
+		if (!next) return;
+		toast = next;
+		clearTimeout(toastTimer);
+		toastTimer = setTimeout(() => (toast = null), 3000);
+	});
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
@@ -55,3 +78,15 @@
 <TimerWidget activeTasks={data.activeTasks} running={data.running} {formError} />
 
 {@render children()}
+
+{#if toast}
+	<div
+		role="status"
+		aria-live="polite"
+		class="fixed right-4 bottom-4 z-50 rounded px-4 py-2 text-sm font-medium text-white shadow-lg"
+		class:bg-gray-800={toast.kind === 'success'}
+		class:bg-red-600={toast.kind === 'error'}
+	>
+		{toast.msg}
+	</div>
+{/if}
