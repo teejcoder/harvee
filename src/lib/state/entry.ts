@@ -91,6 +91,75 @@ export function pickTask(
 }
 
 // ------------------------------------------------------------
+// addManualEntry — create a completed (stopped) entry directly (back-fill)
+// ------------------------------------------------------------
+
+export function addManualEntry(
+	db: Database,
+	args: { taskId: string; notes?: string; startedAt: string; stoppedAt: string },
+	correlationId: string
+): entriesQ.TimeEntry {
+	log.debug({ event: 'state.entry.addManual.enter', correlationId, taskId: args.taskId });
+	const task = tasksQ.getTask(db, args.taskId);
+	if (!task) throw new Error(`task ${args.taskId} not found`);
+	const id = ulid();
+
+	if (task.archivedAt) {
+		logTransition({
+			correlationId,
+			entityType: 'timeEntry',
+			entityId: id,
+			previousState: null,
+			newState: 'entry.stopped',
+			trigger: 'user.addManualEntry',
+			actor: USER_ACTOR,
+			accepted: false,
+			rejectionReason: 'task_archived'
+		});
+		throw new StateTransitionError('task_archived', `task ${args.taskId} is archived`);
+	}
+
+	if (new Date(args.stoppedAt).getTime() <= new Date(args.startedAt).getTime()) {
+		logTransition({
+			correlationId,
+			entityType: 'timeEntry',
+			entityId: id,
+			previousState: null,
+			newState: 'entry.stopped',
+			trigger: 'user.addManualEntry',
+			actor: USER_ACTOR,
+			accepted: false,
+			rejectionReason: 'invalid_time_range'
+		});
+		throw new StateTransitionError('invalid_time_range', `stopped time must be after started time`);
+	}
+
+	const created = db.transaction(() => {
+		const entry = entriesQ.createEntry(
+			db,
+			{ id, taskId: args.taskId, notes: args.notes, state: 'entry.stopped' },
+			correlationId
+		);
+		db.prepare(
+			`INSERT INTO time_entry_segments (id, entry_id, started_at, stopped_at) VALUES (?, ?, ?, ?)`
+		).run(ulid(), id, args.startedAt, args.stoppedAt);
+		return entry;
+	})();
+
+	logTransition({
+		correlationId,
+		entityType: 'timeEntry',
+		entityId: id,
+		previousState: null,
+		newState: 'entry.stopped',
+		trigger: 'user.addManualEntry',
+		actor: USER_ACTOR,
+		accepted: true
+	});
+	return created;
+}
+
+// ------------------------------------------------------------
 // startTimer — entry.draft OR entry.stopped → entry.running
 // ------------------------------------------------------------
 

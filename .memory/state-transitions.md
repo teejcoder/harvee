@@ -88,6 +88,7 @@ A time entry owns one or more **segments** in a child table `time_entry_segments
 | From            | To                | Trigger                                                    | Actor  |
 | --------------- | ----------------- | ---------------------------------------------------------- | ------ |
 | `—`             | `entry.draft`     | User picks a task                                          | user   |
+| `—`             | `entry.stopped`   | User logs a completed block of time manually (back-fill)   | user   |
 | `entry.draft`   | `entry.running`   | User clicks Start (opens first segment)                    | user   |
 | `entry.draft`   | `entry.discarded` | User discards draft                                        | user   |
 | `entry.running` | `entry.stopped`   | User clicks Stop (closes open segment)                     | user   |

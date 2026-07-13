@@ -11,6 +11,7 @@ import { createClient } from '../../../../src/lib/state/client';
 import { createProject } from '../../../../src/lib/state/project';
 import { archiveTask, createTask } from '../../../../src/lib/state/task';
 import {
+	addManualEntry,
 	cancelEdit,
 	discardEntry,
 	lockEntry,
@@ -60,6 +61,49 @@ function seedTask(db: Database): { taskId: string } {
 	const t = createTask(db, { projectId: p.id, name: 'T' }, CID);
 	return { taskId: t.id };
 }
+
+describe('addManualEntry — back-fill a completed block', () => {
+	test('creates a stopped entry with one segment; logs — → entry.stopped', () => {
+		const db = openDb(dbPath, 'db/migrations');
+		const { taskId } = seedTask(db);
+		const e = addManualEntry(
+			db,
+			{ taskId, startedAt: '2026-07-10T09:00:00.000Z', stoppedAt: '2026-07-10T11:00:00.000Z' },
+			CID
+		);
+		const row = db.prepare(`SELECT state FROM time_entries WHERE id = ?`).get(e.id) as {
+			state: string;
+		};
+		expect(row.state).toBe('entry.stopped');
+		const seg = db
+			.prepare(`SELECT COUNT(*) AS n FROM time_entry_segments WHERE entry_id = ?`)
+			.get(e.id) as { n: number };
+		expect(seg.n).toBe(1);
+		const t = transitionLines().at(-1)!;
+		expect(t).toMatchObject({
+			previousState: null,
+			newState: 'entry.stopped',
+			trigger: 'user.addManualEntry',
+			accepted: true
+		});
+		db.close();
+	});
+
+	test('rejects stopped <= started with invalid_time_range', () => {
+		const db = openDb(dbPath, 'db/migrations');
+		const { taskId } = seedTask(db);
+		expect(() =>
+			addManualEntry(
+				db,
+				{ taskId, startedAt: '2026-07-10T11:00:00.000Z', stoppedAt: '2026-07-10T10:00:00.000Z' },
+				CID
+			)
+		).toThrow(StateTransitionError);
+		const t = transitionLines().at(-1)!;
+		expect(t).toMatchObject({ accepted: false, rejectionReason: 'invalid_time_range' });
+		db.close();
+	});
+});
 
 // ---------------------------------------------------------------------------
 // Accepted transitions

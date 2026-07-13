@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import type { PageProps } from './$types';
@@ -55,6 +56,51 @@
 			class="rounded px-2 py-1 text-blue-700 hover:bg-gray-100">→</a
 		>
 	</nav>
+
+	<!-- Back-fill: log a completed block of time you forgot to track live. -->
+	{#if data.activeTasks.length > 0}
+		<section class="mb-6 rounded border border-gray-200 p-4">
+			<h2 class="mb-2 text-sm font-medium text-gray-700">Add time</h2>
+			<form method="post" use:enhance action="?/addTime" class="flex flex-wrap items-end gap-2">
+				<label class="flex-1">
+					<span class="block text-xs text-gray-600">Task</span>
+					<select name="taskId" class="w-full rounded border border-gray-300 px-2 py-1" required>
+						{#each data.activeTasks as t (t.id)}
+							<option value={t.id}>{t.clientName} · {t.projectName} · {t.name}</option>
+						{/each}
+					</select>
+				</label>
+				<label>
+					<span class="block text-xs text-gray-600">Start</span>
+					<input
+						name="startedAt"
+						type="datetime-local"
+						step="1"
+						value={`${data.date}T09:00:00`}
+						class="rounded border border-gray-300 px-2 py-1"
+						required
+					/>
+				</label>
+				<label>
+					<span class="block text-xs text-gray-600">End</span>
+					<input
+						name="stoppedAt"
+						type="datetime-local"
+						step="1"
+						value={`${data.date}T10:00:00`}
+						class="rounded border border-gray-300 px-2 py-1"
+						required
+					/>
+				</label>
+				<button
+					type="submit"
+					class="rounded bg-blue-600 px-3 py-1 text-sm font-medium text-white hover:bg-blue-700"
+				>
+					Add
+				</button>
+			</form>
+		</section>
+	{/if}
 
 	<section class="mb-6">
 		<h2 class="mb-2 text-sm font-medium text-gray-700">Totals by project</h2>
